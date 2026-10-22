@@ -71,7 +71,7 @@ export function createCache(now = Date.now, { maxEntries = 512, onEvent } = {}) 
   return async (key, ttl, loader) => {
     const previous = cache.get(key);
     if (previous && now() < previous.expires) {
-      emit({ key, type: 'hit', expiresAt: previous.expires });
+      emit({ key, type: 'hit', state: previous.result.state, expiresAt: previous.expires });
       return previous.result;
     }
     if (inflight.has(key)) return inflight.get(key);

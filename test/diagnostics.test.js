@@ -288,3 +288,52 @@ test('new config probes never reuse old-generation tasks while the global concur
   const report = await fresh;
   assert.equal(report.sources.find((s) => s.id === 'feed:feed').state, 'ready');
 });
+
+test('resource caches survive presentation edits and invalidate only changed sources', async () => {
+  const store = fixture();
+  let clock = 1000;
+  const calls = { feed: 0, widget: 0 };
+  const dashboard = createDashboardService(store, {
+    now: () => clock,
+    env: { WIDGET_TEST_TOKEN: 'test' },
+    fetcher: async (url) => {
+      const kind = url.includes('/feed') ? 'feed' : 'widget';
+      calls[kind]++;
+      return new Response(kind === 'feed' ? rss : '{"value":9}');
+    },
+  });
+  await dashboard.feed('feed');
+  await dashboard.widget('api');
+  store.replace({
+    ...store.get(),
+    title: 'Renamed',
+    widgets: store.get().widgets.map((w) => ({ ...w, title: 'Renamed widget' })),
+  });
+  await dashboard.feed('feed');
+  await dashboard.widget('api');
+  assert.deepEqual(calls, { feed: 1, widget: 1 });
+  const hit = dashboard.diagnostics().sources.find((s) => s.id === 'feed:feed');
+  assert.equal(hit.cacheState, 'fresh');
+  assert.equal(hit.lastSuccessAt, undefined, 'cache hit must not invent a successful request');
+  store.replace({ ...store.get(), feeds: store.get().feeds.map((f) => ({ ...f, limit: 2 })) });
+  await dashboard.feed('feed');
+  await dashboard.widget('api');
+  assert.deepEqual(calls, { feed: 2, widget: 1 });
+  store.replace({
+    ...store.get(),
+    widgets: store.get().widgets.map((w) => ({
+      ...w,
+      source: { ...w.source, headers: { Authorization: 'changed' } },
+    })),
+  });
+  await dashboard.widget('api');
+  assert.deepEqual(calls, { feed: 2, widget: 2 });
+  clock += 30001;
+  await dashboard.widget('api');
+  assert.equal(calls.widget, 3, 'presentation edits must not extend original TTL');
+  store.replace({ ...store.get(), layout: { ...store.get().layout, hidden: ['feed-feed'] } });
+  assert.throws(() => dashboard.feed('feed'), /Not found/);
+  store.replace({ ...store.get(), layout: { ...store.get().layout, hidden: [] } });
+  await dashboard.feed('feed');
+  assert.equal(calls.feed, 3, 'hidden sources must release their cached data');
+});

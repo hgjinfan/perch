@@ -6,6 +6,7 @@ import { moduleVisible } from '../config/visibility.js';
 import { clientIp, normalizeIp } from '../client-ip.js';
 import { createRequestLimiter, boundedInteger } from '../request-budget.js';
 import { createDiagnostics } from '../diagnostics.js';
+import { createHash } from 'node:crypto';
 
 function requireVisible(config, id) {
   if (!moduleVisible(config, id)) throw new HttpError(404, 'Not found');
@@ -29,7 +30,29 @@ export function createDashboardService(
   let revision = store.revision,
     cached,
     diagnosticWeather;
-  const probes = new Map();
+  const probes = new Map(),
+    resourceCaches = new Map();
+  function signature(value) {
+    return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  }
+  function resource(key, inputs, ttl, loader) {
+    const fingerprint = signature(inputs);
+    let entry = resourceCaches.get(key);
+    if (!entry || entry.fingerprint !== fingerprint) {
+      entry = { fingerprint };
+      let epoch;
+      entry.read = createCache(now, {
+        maxEntries: 1,
+        onEvent(event) {
+          if (event.type === 'start') epoch = store.revision;
+          if (resourceCaches.get(key) !== entry) return;
+          if (event.type === 'hit' || epoch === store.revision) diagnostics.observe(event);
+        },
+      });
+      resourceCaches.set(key, entry);
+    }
+    return entry.read(key, ttl, loader);
+  }
   function resetCaches() {
     const epoch = store.revision;
     cached = createCache(now, {
@@ -62,9 +85,24 @@ export function createDashboardService(
     if (revision !== store.revision) {
       revision = store.revision;
       diagnostics.clear();
+      const config = store.get();
+      const active = new Map([
+        ...config.feeds
+          .filter((f) => moduleVisible(config, `feed-${f.id}`) && f.url)
+          .map((f) => [`feed:${f.id}`, signature([f.url, f.limit])]),
+        ...config.widgets
+          .filter((w) => !config.layout.hidden.includes(`widget-${w.id}`))
+          .map((w) => [`widget:${w.id}`, signature(widgetInputs(w))]),
+      ]);
+      for (const [key, entry] of resourceCaches)
+        if (active.get(key) !== entry.fingerprint) resourceCaches.delete(key);
       resetCaches();
     }
     return store.get();
+  }
+  function widgetInputs(widget) {
+    const { id, title, ...inputs } = widget;
+    return inputs;
   }
   function sources() {
     const config = current();
@@ -134,7 +172,7 @@ export function createDashboardService(
       const feed = config.feeds.find((f) => f.id === id);
       if (!feed) throw new HttpError(404, 'Not found');
       if (!feed.url) return { state: 'unconfigured' };
-      return cached(`feed:${id}`, 300000, async () =>
+      return resource(`feed:${id}`, [feed.url, feed.limit], 300000, async () =>
         parseFeed(await readRemote(feed.url, fetcher), feed.limit),
       );
     },
@@ -143,7 +181,9 @@ export function createDashboardService(
       const widget = config.widgets.find((w) => w.id === id);
       if (!widget || config.layout.hidden.includes(`widget-${id}`))
         throw new HttpError(404, 'Not found');
-      return cached(`widget:${id}`, widget.refresh * 1000, () => loadWidget(widget, fetcher, env));
+      return resource(`widget:${id}`, widgetInputs(widget), widget.refresh * 1000, () =>
+        loadWidget(widget, fetcher, env),
+      );
     },
     weather(request) {
       const config = current();

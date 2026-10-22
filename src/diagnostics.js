@@ -55,9 +55,10 @@ export function createDiagnostics({ now = Date.now, maxEntries = 256 } = {}) {
     clear() {
       records.clear();
     },
-    observe({ key, type, error, hasData, expiresAt, httpStatus }) {
+    observe({ key, type, state, error, hasData, expiresAt, httpStatus }) {
       const record = records.get(key) || { state: 'idle', checking: false, failures: 0 };
       const time = now();
+      if (type === 'hit' && state) record.state = state;
       if (type === 'start') {
         record.checking = true;
         record.lastAttemptAt = time;

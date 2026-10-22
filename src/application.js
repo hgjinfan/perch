@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { createBudgetedFetcher } from './request-budget.js';
 import { createAdminGuard } from './security.js';
 import { createAssets } from './assets.js';
 import { createDashboardService } from './services/dashboard.js';
@@ -22,6 +23,7 @@ export async function createApplication({
     password: env.ADMIN_PASSWORD,
     trustProxyHops: Number(env.TRUST_PROXY_HOPS || 0),
   });
+  fetcher = createBudgetedFetcher(fetcher, { env });
   const dashboard = createDashboardService(store, { fetcher, env });
   const admin = createAdminRoutes({ store, assets, guard, fetcher, env, dashboard });
   const publicRoutes = createPublicRoutes({ store, dashboard, assets, shell: assets.homeShell });
