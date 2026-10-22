@@ -1,0 +1,47 @@
+[
+  {
+    "id": "welcome",
+    "title": "随手记",
+    "icon": "notebook-pen",
+    "type": "text",
+    "source": {
+      "kind": "static",
+      "data": { "text": "这里是我的个人首页。\n记录生活，也照看自己的数字世界。" }
+    },
+    "mapping": { "text": "text" },
+    "refresh": 300
+  },
+  {
+    "id": "traffic",
+    "title": "本月流量",
+    "icon": "activity",
+    "type": "progress",
+    "unit": "GB",
+    "threshold": 80,
+    "source": {
+      "kind": "api",
+      "url": "https://your-service.example/api/traffic",
+      "method": "GET",
+      "headers": { "Authorization": "Bearer ${WIDGET_TRAFFIC_TOKEN}" }
+    },
+    "mapping": { "value": "data.used", "max": "data.total" },
+    "refresh": 60
+  },
+  {
+    "id": "server-metrics",
+    "title": "服务器指标",
+    "icon": "server",
+    "type": "metrics",
+    "source": {
+      "kind": "api",
+      "url": "https://your-service.example/api/stats",
+      "method": "GET",
+      "headers": {}
+    },
+    "fields": [
+      { "label": "CPU", "path": "data.cpu", "unit": "%" },
+      { "label": "内存", "path": "data.memory", "unit": "%" }
+    ],
+    "refresh": 60
+  }
+]

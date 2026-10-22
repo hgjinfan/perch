@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="栖页 Perch：安放服务与日常的个人首页。" />
+    <title>栖页 · Perch</title>
+    <meta name="theme-color" content="#191c20" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Perch" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/icons.js" defer></script>
+    <script src="/app.js" type="module"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <a class="brand" href="/">perch<span>/ home</span></a
+        ><time id="date"></time>
+        <nav aria-label="首页操作">
+          <button id="install-app" aria-label="安装应用" title="安装应用" hidden>
+            <i data-lucide="download"></i>
+          </button>
+          <button id="update-app" title="新版本已准备好" hidden>更新应用</button>
+          <button id="theme" aria-label="切换主题" title="切换主题">
+            <i data-lucide="sun-moon"></i>
+          </button>
+        </nav>
+      </header>
+      <div id="config-update" class="config-update" role="status" hidden>
+        <span>首页配置已更新</span><button type="button" id="refresh-config">刷新查看</button>
+      </div>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <main id="board" class="board" aria-label="个人仪表盘">
+        <p class="initial">正在载入首页…</p>
+      </main>
+      <footer>
+        <span id="updated" aria-live="polite"></span
+        ><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer"
+          >天气由 Open-Meteo 提供</a
+        >
+      </footer>
+    </div>
+  </body>
+</html>

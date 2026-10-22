@@ -1,0 +1,22 @@
+services:
+  homepage:
+    build: .
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3210:3210'
+    environment:
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      WEATHER_RATE_LIMIT: ${WEATHER_RATE_LIMIT:-60}
+      CITY_SEARCH_RATE_LIMIT: ${CITY_SEARCH_RATE_LIMIT:-20}
+      WEATHER_CONCURRENCY: ${WEATHER_CONCURRENCY:-4}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - homepage-data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+
+volumes:
+  homepage-data:

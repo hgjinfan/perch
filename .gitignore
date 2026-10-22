@@ -1,0 +1,16 @@
+node_modules/
+.DS_Store
+.env*
+!.env.example
+config.local*.json
+data/
+backups/
+*.log
+*.pem
+*.key
+*.p12
+*.pfx
+/*.png
+REVIEW.md
+coverage/
+artifacts/

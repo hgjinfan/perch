@@ -1,0 +1,36 @@
+{
+  "name": "perch-homepage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test",
+    "check": "node scripts/check.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "es-module-lexer": "^3.0.4",
+    "fast-xml-parser": "^5.3.0",
+    "lucide": "^0.468.0"
+  },
+  "devDependencies": {
+    "linkedom": "^0.18.13",
+    "prettier": "^3.9.10"
+  },
+  "description": "Perch（栖页）— 安放服务与日常的个人首页",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hgjinfan/perch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hgjinfan/perch/issues"
+  },
+  "homepage": "https://github.com/hgjinfan/perch#readme"
+}

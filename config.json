@@ -1,0 +1,113 @@
+{
+  "title": "perch",
+  "timezone": "UTC",
+  "services": [
+    {
+      "id": "vaultwarden",
+      "name": "Vaultwarden",
+      "icon": "shield-check",
+      "url": ""
+    },
+    {
+      "id": "ntfy",
+      "name": "ntfy",
+      "icon": "bell",
+      "url": ""
+    },
+    {
+      "id": "kuma",
+      "name": "Uptime Kuma",
+      "icon": "activity",
+      "url": ""
+    },
+    {
+      "id": "nezha",
+      "name": "Nezha",
+      "icon": "server",
+      "url": ""
+    },
+    {
+      "id": "docker",
+      "name": "Docker",
+      "icon": "container",
+      "url": ""
+    },
+    {
+      "id": "blog",
+      "name": "Blog",
+      "icon": "notebook-pen",
+      "url": ""
+    }
+  ],
+  "feeds": [
+    {
+      "id": "hn",
+      "name": "Hacker News",
+      "icon": "newspaper",
+      "url": "https://hnrss.org/frontpage",
+      "site": "https://news.ycombinator.com/",
+      "limit": 5
+    },
+    {
+      "id": "v2ex",
+      "name": "V2EX",
+      "icon": "messages-square",
+      "url": "https://www.v2ex.com/index.xml",
+      "site": "https://www.v2ex.com/",
+      "limit": 5
+    },
+    {
+      "id": "selfhosted",
+      "name": "自托管周刊",
+      "icon": "rss",
+      "url": "https://selfh.st/rss/",
+      "site": "https://selfh.st/",
+      "limit": 4
+    },
+    {
+      "id": "blog",
+      "name": "My Blog",
+      "icon": "notebook-pen",
+      "url": "",
+      "site": "",
+      "limit": 4
+    }
+  ],
+  "weather": {
+    "name": "London",
+    "latitude": 51.5074,
+    "longitude": -0.1278,
+    "timezone": "Europe/London",
+    "mode": "fixed"
+  },
+  "bookmarks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/"
+    },
+    {
+      "name": "Cloudflare",
+      "url": "https://dash.cloudflare.com/"
+    },
+    {
+      "name": "Docker Hub",
+      "url": "https://hub.docker.com/"
+    }
+  ],
+  "projects": [
+    {
+      "name": "Glance",
+      "url": "https://github.com/glanceapp/glance"
+    },
+    {
+      "name": "Homarr",
+      "url": "https://github.com/homarr-labs/homarr"
+    },
+    {
+      "name": "Uptime Kuma",
+      "url": "https://github.com/louislam/uptime-kuma"
+    }
+  ],
+  "titles": {},
+  "widgets": []
+}

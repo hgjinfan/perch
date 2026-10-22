@@ -1,0 +1,72 @@
+import { createBackup, parseBackup, summarizeConfig, BACKUP_LIMIT } from '../config/backups.js';
+import { HttpError, json, readJson, requireMethod, requireSameOriginJson } from '../http.js';
+import { validateWidget, loadWidget } from '../widgets.js';
+import { html } from '../render/html.js';
+import { renderPreview } from '../render/widgets.js';
+
+export function createAdminRoutes({ store, assets, guard, fetcher, env }) {
+  return async (path, request, response) => {
+    guard(request, response);
+    if (path === '/api/admin/backup') {
+      requireMethod(request, 'GET');
+      response.setHeader(
+        'Content-Disposition',
+        'attachment; filename="perch-homepage-backup.json"',
+      );
+      return json(response, createBackup(store.get()));
+    }
+    if (path === '/api/admin/backups') {
+      requireMethod(request, 'GET');
+      return json(response, await store.backups.list());
+    }
+    if (path.startsWith('/api/admin/backups/')) {
+      requireMethod(request, 'GET');
+      return json(response, await store.backups.read(path.slice('/api/admin/backups/'.length)));
+    }
+    if (path === '/api/admin/backup/preview' || path === '/api/admin/backup/restore') {
+      requireMethod(request, 'POST');
+      requireSameOriginJson(request);
+      const config = parseBackup(await readJson(request, BACKUP_LIMIT));
+      if (path.endsWith('/preview')) {
+        response.setHeader('ETag', store.version);
+        return json(response, summarizeConfig(config));
+      }
+      await store.save(config, request.headers['if-match'], { recovery: true });
+      response.setHeader('ETag', store.version);
+      return json(response, { restored: true });
+    }
+    if (path === '/api/admin/config') {
+      if (request.method === 'GET') {
+        response.setHeader('ETag', store.version);
+        return json(response, store.get());
+      }
+      requireMethod(request, 'PUT');
+      requireSameOriginJson(request);
+      const saved = await store.save(await readJson(request), request.headers['if-match']);
+      response.setHeader('ETag', store.version);
+      return json(response, saved);
+    }
+    if (path === '/api/admin/widget-preview') {
+      requireMethod(request, 'POST');
+      requireSameOriginJson(request);
+      const value = await readJson(request);
+      let widget;
+      try {
+        widget = validateWidget(value);
+      } catch (error) {
+        throw new HttpError(400, error.message);
+      }
+      try {
+        return html(response, renderPreview(widget, await loadWidget(widget, fetcher, env)));
+      } catch (error) {
+        const known =
+          /^(映射字段|找不到文本|总量必须|列表路径|API 返回 HTTP|缺少密钥|响应不是|响应超过)/.test(
+            error.message,
+          );
+        throw new HttpError(422, known ? error.message : '接口请求失败，请检查地址、认证和网络');
+      }
+    }
+    requireMethod(request, 'GET', 'HEAD');
+    await assets.send(path, request, response);
+  };
+}

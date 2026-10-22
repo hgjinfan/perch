@@ -1,0 +1,17 @@
+node_modules
+.git
+.env*
+config.local*.json
+test
+data
+backups
+*.log
+*.pem
+*.key
+*.p12
+*.pfx
+*.png
+REVIEW.md
+coverage
+artifacts
+!public/icons/*.png

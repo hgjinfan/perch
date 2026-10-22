@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>管理首页 · Perch</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/admin.css" />
+    <script src="/admin.js" type="module"></script>
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header>
+        <a class="brand" href="/">perch<span>/ 管理</span></a
+        ><a class="back" href="/">查看公开首页 ↗</a>
+      </header>
+      <h1>首页管理</h1>
+      <p class="muted">这里的修改会应用到所有访客看到的首页。主题偏好仍由访客自己选择。</p>
+      <p id="admin-message" role="status">正在加载…</p>
+      <a id="config-conflict" href="/admin" target="_blank" rel="noopener noreferrer" hidden
+        >在新标签查看最新配置并对照修改 ↗</a
+      >
+      <form id="admin-form" novalidate hidden>
+        <fieldset id="editor-fields">
+          <section class="tile admin-section">
+            <h2>基本信息</h2>
+            <label>首页名称<input name="title" required maxlength="60" /></label
+            ><label>日期时区<input name="timezone" required placeholder="Asia/Shanghai" /></label
+            ><label
+              >内容密度<select name="density">
+                <option value="comfortable">标准</option>
+                <option value="compact">紧凑</option>
+              </select></label
+            >
+          </section>
+          <section class="tile admin-section">
+            <h2>磁块标题</h2>
+            <div id="title-options"></div>
+            <p class="muted">服务和订阅的标题在各自名称中修改。</p>
+          </section>
+          <section class="tile admin-section">
+            <h2>自定义磁块</h2>
+            <div id="preset-picker"></div>
+            <div id="widgets-editor"></div>
+            <button id="add-widget" type="button">＋ 添加磁块</button>
+          </section>
+          <section class="tile admin-section">
+            <h2>磁贴布局</h2>
+            <p class="muted">
+              分组可排序，磁块可跨组移动和设置宽度。高度随内容变化，窄屏自动减少列数。修改后保存应用。
+            </p>
+            <div id="layout-editor"></div>
+            <h3>顶部服务状态</h3>
+            <div id="module-options"></div>
+          </section>
+          <section class="tile admin-section">
+            <h2>服务入口</h2>
+            <div id="services-editor"></div>
+            <button type="button" data-add="services">＋ 添加服务</button>
+          </section>
+          <section class="tile admin-section">
+            <h2>资讯订阅</h2>
+            <div id="feeds-editor"></div>
+            <button type="button" data-add="feeds">＋ 添加订阅</button>
+          </section>
+          <section class="tile admin-section">
+            <h2>天气</h2>
+            <label>启用天气<input type="checkbox" name="weather-enabled" /></label>
+            <div id="weather-fields">
+              <label
+                >位置模式<select name="weather-mode">
+                  <option value="ip">按访客 IP，失败时使用默认城市</option>
+                  <option value="fixed">固定城市</option>
+                </select></label
+              >
+              <label>默认城市<input name="city" maxlength="80" /></label
+              ><label
+                >纬度<input name="latitude" type="number" step="any" min="-90" max="90" /></label
+              ><label
+                >经度<input name="longitude" type="number" step="any" min="-180" max="180" /></label
+              ><label>城市时区<input name="weather-timezone" placeholder="Asia/Seoul" /></label>
+            </div>
+          </section>
+          <section class="tile admin-section">
+            <h2>常用书签</h2>
+            <div id="bookmarks-editor"></div>
+            <button type="button" data-add="bookmarks">＋ 添加书签</button>
+          </section>
+          <section class="tile admin-section">
+            <h2>关注项目</h2>
+            <div id="projects-editor"></div>
+            <button type="button" data-add="projects">＋ 添加项目</button>
+          </section>
+          <section class="tile admin-section" id="backup-settings">
+            <h2>配置备份与恢复</h2>
+            <p class="muted">
+              备份包含已保存的内容、布局和接口配置，不包含
+              .env。直接写入配置的令牌也会导出，请妥善保存文件。
+            </p>
+            <a
+              class="backup-download"
+              href="/api/admin/backup"
+              download="perch-homepage-backup.json"
+              >下载当前已保存配置</a
+            >
+            <label
+              >选择备份文件<input id="backup-file" type="file" accept=".json,application/json"
+            /></label>
+            <p class="field-help">
+              支持本应用的备份文件或旧版配置 JSON，最大 1 MiB。选择文件只检查，不会立即修改配置。
+            </p>
+            <p id="backup-message" role="status"></p>
+            <p id="backup-summary" hidden></p>
+            <label class="backup-confirm"
+              >我确认替换已保存配置并清除当前未保存的编辑<input
+                id="backup-confirm"
+                type="checkbox"
+                disabled
+            /></label>
+            <button id="backup-restore" type="button" disabled>恢复此备份</button>
+            <details class="backup-history">
+              <summary>恢复前快照（最近 10 份）</summary>
+              <p class="field-help">
+                每次恢复前自动保存当前已保存配置；移除的旧快照不会影响已下载文件。
+              </p>
+              <button id="backup-refresh" type="button">刷新记录</button>
+              <div id="backup-history"></div>
+            </details>
+          </section>
+        </fieldset>
+        <div class="save-row">
+          <span id="edit-state" role="status">所有修改已保存</span>
+          <button type="button" id="discard" disabled>放弃修改</button>
+          <span id="discard-confirm" hidden
+            >放弃所有未保存修改？ <button type="button" id="discard-yes">确认放弃</button>
+            <button type="button" id="discard-no">继续编辑</button></span
+          >
+          <button class="done" type="submit" id="save">保存并应用</button
+          ><span class="muted">保存后刷新公开首页查看</span>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>
