@@ -22,7 +22,12 @@ function location(value) {
   return { name: value.name, latitude: value.latitude, longitude: value.longitude, timezone };
 }
 
-export function createWeatherService({ fetcher = fetch, env = process.env, now = Date.now } = {}) {
+export function createWeatherService({
+  fetcher = fetch,
+  env = process.env,
+  now = Date.now,
+  onForecastEvent,
+} = {}) {
   const upstream = createUpstreamBudget({
     concurrency: boundedInteger(env.WEATHER_CONCURRENCY, 4, 1, 16),
     now,
@@ -30,7 +35,7 @@ export function createWeatherService({ fetcher = fetch, env = process.env, now =
   const remoteJson = (url) =>
     upstream.run(new URL(url).hostname, async () => JSON.parse(await readRemote(url, fetcher)));
   const geo = createCache(now, { maxEntries: 512 });
-  const weather = createCache(now, { maxEntries: 256 });
+  const weather = createCache(now, { maxEntries: 256, onEvent: onForecastEvent });
   const cities = createCache(now, { maxEntries: 128 });
   return {
     async get(fallback, request) {

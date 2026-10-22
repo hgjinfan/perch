@@ -1,12 +1,27 @@
+import { createRequestLimiter } from '../request-budget.js';
 import { createBackup, parseBackup, summarizeConfig, BACKUP_LIMIT } from '../config/backups.js';
 import { HttpError, json, readJson, requireMethod, requireSameOriginJson } from '../http.js';
 import { validateWidget, loadWidget } from '../widgets.js';
 import { html } from '../render/html.js';
 import { renderPreview } from '../render/widgets.js';
 
-export function createAdminRoutes({ store, assets, guard, fetcher, env }) {
+export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboard }) {
+  const limitDiagnostics = createRequestLimiter({ limit: 30 });
   return async (path, request, response) => {
     guard(request, response);
+    if (path === '/api/admin/diagnostics') {
+      requireMethod(request, 'GET');
+      return json(response, dashboard.diagnostics());
+    }
+    if (path === '/api/admin/diagnostics/check') {
+      requireMethod(request, 'POST');
+      requireSameOriginJson(request);
+      limitDiagnostics('admin');
+      const body = await readJson(request, 1024);
+      if (typeof body?.id !== 'string' || body.id.length > 80)
+        throw new HttpError(400, '数据源标识无效');
+      return json(response, await dashboard.checkDiagnostic(body.id));
+    }
     if (path === '/api/admin/backup') {
       requireMethod(request, 'GET');
       response.setHeader(

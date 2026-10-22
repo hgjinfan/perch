@@ -58,39 +58,60 @@ export async function readRemote(url, fetcher = fetch) {
   }
   return Buffer.concat(chunks).toString('utf8');
 }
-export function createCache(now = Date.now, { maxEntries = 512 } = {}) {
+export function createCache(now = Date.now, { maxEntries = 512, onEvent } = {}) {
+  const emit = (event) => {
+    try {
+      onEvent?.(event);
+    } catch {
+      /* Diagnostics must not affect content loading. */
+    }
+  };
   const cache = new Map(),
     inflight = new Map();
   return async (key, ttl, loader) => {
     const previous = cache.get(key);
-    if (previous && now() < previous.expires) return previous.result;
+    if (previous && now() < previous.expires) {
+      emit({ key, type: 'hit', expiresAt: previous.expires });
+      return previous.result;
+    }
     if (inflight.has(key)) return inflight.get(key);
-    const promise = (async () => {
+    emit({ key, type: 'start' });
+    const promise = Promise.resolve().then(async () => {
       try {
         const result = {
           state: 'ready',
           data: await loader(),
           updatedAt: new Date(now()).toISOString(),
         };
-        cache.set(key, { result, expires: now() + ttl });
+        const expires = now() + ttl;
+        cache.set(key, { result, expires });
+        emit({ key, type: 'success', expiresAt: expires });
         if (cache.size > maxEntries) cache.delete(cache.keys().next().value);
         return result;
-      } catch {
+      } catch (error) {
         const result = previous?.result.data
           ? { ...previous.result, state: 'stale', message: '暂时无法更新，显示上次内容' }
           : { state: 'error', message: '暂时无法获取，请稍后刷新' };
-        cache.set(key, { result, expires: now() + 30_000 });
+        const expires = now() + 30_000;
+        cache.set(key, { result, expires });
+        emit({
+          key,
+          type: 'error',
+          error,
+          hasData: Boolean(previous?.result.data),
+          expiresAt: expires,
+        });
         if (cache.size > maxEntries) cache.delete(cache.keys().next().value);
         return result;
       } finally {
         inflight.delete(key);
       }
-    })();
+    });
     inflight.set(key, promise);
     return promise;
   };
 }
-export async function checkService(service, fetcher = fetch) {
+export async function checkService(service, fetcher = fetch, onError = () => {}) {
   const url = safeUrl(service.healthUrl || service.url);
   if (!url) return { id: service.id, state: 'unconfigured' };
   const start = performance.now();
@@ -108,7 +129,12 @@ export async function checkService(service, fetcher = fetch) {
       latency: Math.round(performance.now() - start),
       status: response.status,
     };
-  } catch {
+  } catch (error) {
+    try {
+      onError(error);
+    } catch {
+      /* Observation must not change service availability. */
+    }
     return { id: service.id, state: 'offline' };
   }
 }

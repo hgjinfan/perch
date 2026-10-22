@@ -1,3 +1,4 @@
+import { mountDiagnostics } from './admin/diagnostics.js';
 import { notifyConfigChange } from './core/config-events.js';
 import { createEditSession } from './admin/edit-session.js';
 import { attachFieldValidation, validateFields, validateTimeZone } from './admin/validation.js';
@@ -13,7 +14,8 @@ let config,
   configVersion,
   session,
   savedConfig,
-  saving = false;
+  saving = false,
+  diagnosticsPanel;
 const field = (name) => form.elements.namedItem(name);
 function moduleOptions() {
   const target = document.querySelector('#module-options');
@@ -235,6 +237,7 @@ form.onsubmit = async (event) => {
       onResponse: (r) => (configVersion = r.headers.get('etag')),
     });
     notifyConfigChange();
+    diagnosticsPanel?.refresh();
     renderEditor(result);
     savedConfig = structuredClone(result);
     session.saved();
@@ -296,6 +299,9 @@ document.querySelector('#discard-yes').onclick = () => {
     mountBackups(document.querySelector('#backup-settings'), {
       onRestored: () => session.allowLeave(),
     });
+    const panel = document.querySelector('#diagnostics-panel');
+    diagnosticsPanel = mountDiagnostics(panel);
+    panel.hidden = false;
     form.hidden = false;
     message.textContent = '仅管理员可访问和修改此页面。';
   } catch (error) {

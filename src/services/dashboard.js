@@ -5,13 +5,16 @@ import { createWeatherService } from './weather.js';
 import { moduleVisible } from '../config/visibility.js';
 import { clientIp, normalizeIp } from '../client-ip.js';
 import { createRequestLimiter, boundedInteger } from '../request-budget.js';
+import { createDiagnostics } from '../diagnostics.js';
 
 function requireVisible(config, id) {
   if (!moduleVisible(config, id)) throw new HttpError(404, 'Not found');
 }
-
-export function createDashboardService(store, { fetcher = fetch, env = process.env } = {}) {
-  const weatherService = createWeatherService({ fetcher, env });
+export function createDashboardService(
+  store,
+  { fetcher = fetch, env = process.env, now = Date.now } = {},
+) {
+  const weatherService = createWeatherService({ fetcher, env, now });
   const weatherLimit = createRequestLimiter({
     limit: boundedInteger(env.WEATHER_RATE_LIMIT, 60, 1, 600),
   });
@@ -22,21 +25,107 @@ export function createDashboardService(store, { fetcher = fetch, env = process.e
     clientIp(request, Number(env.TRUST_PROXY_HOPS || 0)) ||
     normalizeIp(request.socket.remoteAddress) ||
     'unresolved';
-  let revision = store.revision;
-  let cached = createCache();
+  const diagnostics = createDiagnostics({ now });
+  let revision = store.revision,
+    cached,
+    diagnosticWeather;
+  const probes = new Map();
+  function resetCaches() {
+    const epoch = store.revision;
+    cached = createCache(now, {
+      onEvent: (event) => {
+        if (epoch !== store.revision) return;
+        if (event.key === 'status') {
+          if (event.expiresAt !== undefined)
+            for (const service of store.get().services)
+              if (service.url || service.healthUrl)
+                diagnostics.observe({
+                  key: `service:${service.id}`,
+                  type: 'cache',
+                  expiresAt: event.expiresAt,
+                });
+        } else diagnostics.observe(event);
+      },
+    });
+    // A separate admin-only forecast avoids observing visitor locations, IPs or city searches.
+    diagnosticWeather = createWeatherService({
+      fetcher,
+      env,
+      now,
+      onForecastEvent: (event) => {
+        if (epoch === store.revision) diagnostics.observe({ ...event, key: 'weather' });
+      },
+    });
+  }
+  resetCaches();
   function current() {
     if (revision !== store.revision) {
-      cached = createCache();
       revision = store.revision;
+      diagnostics.clear();
+      resetCaches();
     }
     return store.get();
   }
-  return {
+  function sources() {
+    const config = current();
+    return [
+      ...config.services.map((s) => ({
+        id: `service:${s.id}`,
+        name: s.name,
+        kind: 'service',
+        enabled: moduleVisible(config, 'status'),
+        configured: Boolean(s.url || s.healthUrl),
+        sourceType: 'http',
+      })),
+      ...config.feeds.map((f) => ({
+        id: `feed:${f.id}`,
+        name: f.name,
+        kind: 'feed',
+        enabled: moduleVisible(config, `feed-${f.id}`),
+        configured: Boolean(f.url),
+        sourceType: 'rss',
+      })),
+      ...config.widgets.map((w) => ({
+        id: `widget:${w.id}`,
+        name: w.title,
+        kind: 'widget',
+        enabled: !config.layout.hidden.includes(`widget-${w.id}`),
+        configured: w.source.kind === 'static' || Boolean(w.source.url),
+        sourceType: w.source.kind === 'static' ? 'manual' : 'api',
+      })),
+      {
+        id: 'weather',
+        name: config.titles.weather || '默认城市天气',
+        kind: 'weather',
+        enabled: moduleVisible(config, 'weather'),
+        configured: Boolean(config.weather),
+        sourceType: 'default-city',
+      },
+    ];
+  }
+  const service = {
     status() {
       const config = current();
       requireVisible(config, 'status');
+      const epoch = store.revision;
       return cached('status', 60000, () =>
-        Promise.all(config.services.map((s) => checkService(s, fetcher))),
+        Promise.all(
+          config.services.map(async (s) => {
+            const key = `service:${s.id}`;
+            if (epoch === store.revision && (s.url || s.healthUrl))
+              diagnostics.observe({ key, type: 'start' });
+            let failure;
+            const result = await checkService(s, fetcher, (error) => (failure = error));
+            if (epoch === store.revision && result.state !== 'unconfigured')
+              diagnostics.observe({
+                key,
+                type: result.state === 'online' ? 'success' : 'error',
+                error: failure || new Error(`HTTP ${result.status}`),
+                httpStatus: result.status,
+              });
+            return result;
+          }),
+        ),
       );
     },
     feed(id) {
@@ -69,5 +158,44 @@ export function createDashboardService(store, { fetcher = fetch, env = process.e
       searchLimit(visitor(request));
       return weatherService.search(query);
     },
+    diagnostics() {
+      return {
+        generatedAt: now(),
+        sources: sources().map((source) => ({ ...source, ...diagnostics.get(source.id) })),
+      };
+    },
+    async checkDiagnostic(id) {
+      const source = sources().find((s) => s.id === id);
+      if (!source || !source.enabled || !source.configured)
+        throw new HttpError(404, '数据源未启用或尚未配置');
+      const probeKey = `${store.revision}:${id}`;
+      if (probes.has(probeKey)) return probes.get(probeKey);
+      // Old-generation requests still count toward the global bound until they settle;
+      // they may share a public cache request, so cancelling them would disrupt readers.
+      if (probes.size >= 2) {
+        const error = new HttpError(429, '诊断任务繁忙，请稍后重试');
+        error.retryAfter = 2;
+        throw error;
+      }
+      const config = store.get();
+      const task = Promise.resolve()
+        .then(async () => {
+          if (store.get() !== config) throw new HttpError(409, '配置已变化，请刷新诊断列表');
+          if (source.kind === 'service') await service.status();
+          else if (source.kind === 'feed') await service.feed(id.slice(5));
+          else if (source.kind === 'widget') await service.widget(id.slice(7));
+          else
+            await diagnosticWeather.get(
+              { ...config.weather, mode: 'fixed' },
+              { url: '/diagnostic-weather', headers: {}, socket: { remoteAddress: '127.0.0.1' } },
+            );
+          if (store.get() !== config) throw new HttpError(409, '配置已变化，请刷新诊断列表');
+          return service.diagnostics();
+        })
+        .finally(() => probes.delete(probeKey));
+      probes.set(probeKey, task);
+      return task;
+    },
   };
+  return service;
 }

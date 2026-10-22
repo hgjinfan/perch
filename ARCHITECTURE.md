@@ -136,3 +136,11 @@ PWA 只缓存静态资源与通用 `/offline.html`。动态首页与 `/fragments
 `src/config/page-version.js` 在单服务实例中为配置快照维护随机公共标记，同内容的新对象保留原标记；它与资源发布版本组合后注入首页 data-page-version。管理员使用的配置内容 ETag 保持独立，不暴露给公开检测接口。
 
 公开路由 `/page-version` 仅支持 GET/HEAD，返回无正文的 204，If-None-Match 命中返回 304，两者均 no-store。`public/home/config-updates.js` 独立处理 30 秒检查、前后台及联网条件、5 秒超时、请求合并和一次性提示，失败不干扰内容加载器。`core/config-events.js` 仅广播无配置内容的 changed 信号，由首页重新核对服务端版本；广播不能直接触发页面重载。管理保存及备份恢复均在成功后广播。点击刷新仍遵循现有网络首页与版本化资源机制。
+
+## 数据源诊断
+
+`src/diagnostics.js` 只保留固定分类的错误、状态、时间和计数；不保存 Error、源 URL、响应数据或 headers。`createCache` 可选 onEvent 输出内部生命周期事件，不改变公开 result 结构，观察回调失败不会影响内容加载。`dashboard` 组合来源元数据、缓存事件及逐服务检测结果；revision 改变后清理记录，旧事件有 epoch 保护。诊断检查按 revision+source 合并，跨 revision 的在途请求仍计入全局并发限制，避免取消共享缓存任务影响读者。
+
+默认城市天气使用独立 admin-only weather service，onForecastEvent 仅记录固定 weather 键，强制 fixed 模式，访客天气、定位和搜索不进入诊断。缓存命中事件只更新到期信息，不伪造请求或成功时间。
+
+管理员 GET `/api/admin/diagnostics` 只读内存；POST `/api/admin/diagnostics/check` 仅接受已保存来源 ID，校验认证、同源、可见性、请求预算和配置一致性。公开 HTML/片段没有诊断详情。`public/admin/diagnostics.js` 展开时读取，单源显式检查，刷新记录与进行中检查协调；面板位于编辑 form 外，不影响编辑脏状态。

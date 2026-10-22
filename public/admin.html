@@ -140,6 +140,31 @@
           ><span class="muted">保存后刷新公开首页查看</span>
         </div>
       </form>
+      <details id="diagnostics-panel" class="tile admin-section" hidden>
+        <summary>数据源诊断</summary>
+        <p class="field-help">
+          使用当前已保存配置。读取列表不会请求上游；检查遵循缓存，服务入口共享一次状态检测。记录仅保存在当前进程内存，重启或保存配置后重新累计。
+        </p>
+        <div class="diagnostics-tools">
+          <label
+            >筛选<input
+              id="diagnostics-search"
+              type="search"
+              placeholder="按名称筛选"
+              maxlength="80"
+          /></label>
+          <label
+            >状态<select id="diagnostics-filter">
+              <option value="all">全部</option>
+              <option value="error">仅异常</option>
+              <option value="idle">未检查</option>
+            </select></label
+          >
+          <button id="diagnostics-refresh" type="button">刷新记录</button>
+        </div>
+        <p id="diagnostics-message" role="status" class="field-help">展开后读取记录。</p>
+        <div id="diagnostics-list"></div>
+      </details>
     </main>
   </body>
 </html>

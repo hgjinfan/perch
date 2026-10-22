@@ -22,6 +22,7 @@ export async function loadWidget(w, fetcher = fetch, env = process.env) {
         : {}),
     });
     if (!response.ok) throw new Error(`API 返回 HTTP ${response.status}`);
+    if (!response.body) throw new Error('响应不是有效 JSON');
     let size = 0;
     const chunks = [];
     for await (const chunk of response.body) {

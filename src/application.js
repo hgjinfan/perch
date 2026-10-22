@@ -20,8 +20,8 @@ export async function createApplication({
     password: env.ADMIN_PASSWORD,
     trustProxyHops: Number(env.TRUST_PROXY_HOPS || 0),
   });
-  const admin = createAdminRoutes({ store, assets, guard, fetcher, env });
   const dashboard = createDashboardService(store, { fetcher, env });
+  const admin = createAdminRoutes({ store, assets, guard, fetcher, env, dashboard });
   const publicRoutes = createPublicRoutes({ store, dashboard, assets, shell: assets.homeShell });
   return createServer(async (request, response) => {
     securityHeaders(response);
