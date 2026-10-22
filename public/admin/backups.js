@@ -107,12 +107,15 @@ export function mountBackups(root, { onRestored = () => {} } = {}) {
       const items = await requestJson('/api/admin/backups');
       history.replaceChildren();
       if (!items.length)
-        history.append(node('p', '还没有恢复记录；首次恢复前会自动保存当前配置。'));
+        history.append(node('p', '还没有配置历史；保存修改或恢复配置前会自动记录上一版。'));
       for (const item of items) {
         const row = node('div');
         row.className = 'backup-history-row';
         row.append(
-          node('span', `${new Date(item.createdAt).toLocaleString('zh-CN')} · ${item.title}`),
+          node(
+            'span',
+            `${new Date(item.createdAt).toLocaleString('zh-CN')} · ${item.reason === 'save' ? '保存前' : '恢复前'} · ${item.title}`,
+          ),
         );
         const select = node('button', '检查并恢复');
         select.type = 'button';
@@ -125,7 +128,7 @@ export function mountBackups(root, { onRestored = () => {} } = {}) {
         history.append(row);
       }
     } catch (error) {
-      history.textContent = `读取恢复记录失败：${error.message}`;
+      history.textContent = `读取配置历史失败：${error.message}`;
     } finally {
       listing = false;
       refresh.disabled = busy;

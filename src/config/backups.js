@@ -51,7 +51,12 @@ export function createBackupRepository(directory, { keep = 10 } = {}) {
         try {
           const backup = JSON.parse(await readFile(join(directory, id), 'utf8'));
           const config = parseBackup(backup);
-          items.push({ id, createdAt: backup.createdAt, ...summarizeConfig(config) });
+          items.push({
+            id,
+            createdAt: backup.createdAt,
+            reason: backup.reason === 'save' ? 'save' : 'restore',
+            ...summarizeConfig(config),
+          });
         } catch {
           /* Ignore incomplete or externally damaged snapshots. */
         }
@@ -69,14 +74,22 @@ export function createBackupRepository(directory, { keep = 10 } = {}) {
         throw error;
       }
     },
-    async write(config) {
+    async write(config, { reason = 'restore' } = {}) {
       await mkdir(directory, { recursive: true, mode: 0o700 });
       await chmod(directory, 0o700);
       const id = `${Date.now()}-${randomUUID()}.json`,
         path = join(directory, id);
-      await writeFile(path + '.tmp', JSON.stringify(createBackup(config), null, 2) + '\n', {
-        mode: 0o600,
-      });
+      await writeFile(
+        path + '.tmp',
+        JSON.stringify(
+          { ...createBackup(config), reason: reason === 'save' ? 'save' : 'restore' },
+          null,
+          2,
+        ) + '\n',
+        {
+          mode: 0o600,
+        },
+      );
       await rename(path + '.tmp', path);
       // Cleanup must never turn an already-created recovery point into a failed restore.
       for (const old of (await files()).slice(keep))

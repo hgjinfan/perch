@@ -83,6 +83,7 @@ test('Failed persistence does not replace live config and save lock is released'
   fail = false;
   const saving = store.save(next, store.version);
   await assert.rejects(store.save(next, store.version), (error) => error.status === 409);
+  while (!release) await new Promise((resolve) => setImmediate(resolve));
   release();
   await saving;
   assert.equal(store.get().title, 'Changed');

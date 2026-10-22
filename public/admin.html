@@ -120,9 +120,9 @@
             /></label>
             <button id="backup-restore" type="button" disabled>恢复此备份</button>
             <details class="backup-history">
-              <summary>恢复前快照（最近 10 份）</summary>
+              <summary>自动配置历史（最近 10 份）</summary>
               <p class="field-help">
-                每次恢复前自动保存当前已保存配置；移除的旧快照不会影响已下载文件。
+                每次保存修改或恢复配置前自动记录上一版，相同配置不重复记录；移除的旧历史不会影响已下载文件。
               </p>
               <button id="backup-refresh" type="button">刷新记录</button>
               <div id="backup-history"></div>

@@ -112,11 +112,11 @@ PWA 只缓存静态资源与通用 `/offline.html`。动态首页与 `/fragments
 
 ## 备份与恢复
 
-`src/config/backups.js` 提供版本化备份封装、兼容原始配置的校验及有限历史仓库；快照文件模式 0600、目录 0700，只通过管理员路由读取，不进入静态资源索引或 PWA 缓存。`store.save(value, version, { recovery: true })` 在同一保存互斥期间先写恢复点，再原子写入新配置；前者失败阻止后者，后者失败不替换内存配置。
+`src/config/backups.js` 提供版本化备份封装、兼容原始配置的校验及有限历史仓库；快照文件模式 0600、目录 0700，只通过管理员路由读取，不进入静态资源索引或 PWA 缓存。`store.save()` 在普通保存和恢复时均在同一保存互斥期间先写上一版快照；规范化内容相同则直接返回，不写文件或增加修订号。快照标记 save/restore，旧快照按 restore 兼容。随后再原子写入新配置；前者失败阻止后者，后者失败不替换内存配置。
 
 管理接口包含 GET `/api/admin/backup`（下载已保存配置）、GET `/api/admin/backups`、GET `/api/admin/backups/<id>`、POST `/api/admin/backup/preview`、POST `/api/admin/backup/restore`。预检查复用 schema、不调用上游，返回内容概况及当前 ETag；恢复要求 If-Match。仓库严格限制快照 ID，不接受任意路径。现有配置持久化与版本检查仍按单 store、单进程设计。
 
-`public/admin/backups.js` 独立管理文件大小限制、异步预检查失效、确认步骤及历史记录；未勾选确认不能发起恢复，成功后重载表单。客户端不独立实现配置 schema，服务端始终重新校验恢复内容。新增备份能力不改变普通保存行为。
+`public/admin/backups.js` 独立管理文件大小限制、异步预检查失效、确认步骤及历史记录；未勾选确认不能发起恢复，成功后重载表单。客户端不独立实现配置 schema，服务端始终重新校验恢复内容。普通保存和恢复共用最近 10 份历史，保存前快照同样不包含环境变量或运行缓存。
 
 ## 数据源预设
 

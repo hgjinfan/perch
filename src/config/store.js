@@ -48,7 +48,8 @@ export async function createConfigStore({
         } catch (error) {
           throw new HttpError(400, error.message);
         }
-        if (recovery) await backups.write(config);
+        if (JSON.stringify(next) === JSON.stringify(config)) return config;
+        await backups.write(config, { reason: recovery ? 'restore' : 'save' });
         await persist(statePath, next);
         config = next;
         revision += 1;

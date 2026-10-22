@@ -131,7 +131,7 @@ test('restore blocks stale previews after another save, and snapshot failure lea
     ).status,
     409,
   );
-  assert.deepEqual(await store.backups.list(), []);
+  assert.equal((await store.backups.list()).length, 1);
   const failing = await createConfigStore({
     statePath: '/unused/test.json',
     configPath,
@@ -171,4 +171,26 @@ test('failed config write retains a readable recovery point; history keeps ten s
   for (let i = 0; i < 12; i++) await repository.write(before);
   assert.equal((await repository.list()).length, 10);
   await assert.rejects(repository.read('../site.json'), /不存在/);
+});
+
+test('ordinary saves automatically retain history, no-op and rejected saves do not add entries', async (t) => {
+  const { store, directory } = await fixture(t);
+  const before = structuredClone(store.get()),
+    version = store.version;
+  await store.save(before, version);
+  assert.equal(store.revision, 0);
+  assert.deepEqual(await store.backups.list(), []);
+  await store.save({ ...before, title: 'Updated' }, version);
+  const history = await store.backups.list();
+  assert.equal(history.length, 1);
+  assert.equal(history[0].reason, 'save');
+  assert.deepEqual((await store.backups.read(history[0].id)).config, before);
+  await assert.rejects(store.save(before, version), { status: 409 });
+  await assert.rejects(store.save({ ...before, title: '' }, store.version), { status: 400 });
+  assert.equal((await store.backups.list()).length, 1);
+  const restarted = await createConfigStore({
+    statePath: join(directory, 'site.json'),
+    configPath,
+  });
+  assert.equal((await restarted.backups.list()).length, 1);
 });
