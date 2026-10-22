@@ -11,7 +11,11 @@ const store = await createConfigStore({
   statePath: process.env.STATE_PATH || resolve(root, 'data/site.json'),
   configPath: process.env.CONFIG_PATH || resolve(root, 'config.json'),
 });
-const server = await createApplication({ root, store });
+const server = await createApplication({
+  root,
+  store,
+  assetsMode: process.env.PERCH_ASSETS === 'source' ? 'source' : 'built',
+});
 const host = process.env.HOST || '127.0.0.1';
 server.listen(Number(process.env.PORT || 3210), host, () => {
   console.log(`Perch Homepage: http://${host}:${server.address().port}`);

@@ -1,3 +1,4 @@
+import { createBuiltAssets } from './built-assets.js';
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve, extname, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -14,7 +15,8 @@ const contentTypes = {
   '.webmanifest': 'application/manifest+json',
 };
 const privateFiles = new Set(['admin.html', 'admin.js', 'admin.css', 'widget-editor.js']);
-export async function createAssets(root) {
+export async function createAssets(root, { mode = 'source', directory } = {}) {
+  if (mode === 'built') return createBuiltAssets(root, { directory });
   const files = new Map();
   async function collect(directory, prefix, admin = false) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {

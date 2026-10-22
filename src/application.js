@@ -13,8 +13,10 @@ export async function createApplication({
   env = process.env,
   fetcher = fetch,
   logger = console,
+  assetsMode = 'source',
+  assetsDirectory,
 }) {
-  const assets = await createAssets(root);
+  const assets = await createAssets(root, { mode: assetsMode, directory: assetsDirectory });
   const guard = createAdminGuard({
     username: env.ADMIN_USERNAME || 'admin',
     password: env.ADMIN_PASSWORD,

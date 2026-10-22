@@ -35,7 +35,7 @@ test('HTTP authorization, CSRF protection, persisted config, and fail-closed adm
   const password = randomBytes(24).toString('hex');
   let child;
   t.after(async () => {
-    if (child) {
+    if (child && child.exitCode === null) {
       child.kill();
       await new Promise((resolve) => child.once('exit', resolve));
     }
@@ -47,6 +47,7 @@ test('HTTP authorization, CSRF protection, persisted config, and fail-closed adm
       env: {
         ...process.env,
         PORT: '0',
+        PERCH_ASSETS: 'source',
         ADMIN_PASSWORD: secret,
         ADMIN_USERNAME: 'admin',
         STATE_PATH: join(dir, 'site.json'),

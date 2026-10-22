@@ -15,3 +15,5 @@ REVIEW.md
 coverage
 artifacts
 !public/icons/*.png
+
+dist/

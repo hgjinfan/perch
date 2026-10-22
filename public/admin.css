@@ -492,3 +492,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+#backup-settings > summary {
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+}

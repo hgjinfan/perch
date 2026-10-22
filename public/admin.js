@@ -1,9 +1,8 @@
-import { mountDiagnostics } from './admin/diagnostics.js';
+import { mountLazyPanel } from './admin/lazy-panel.js';
 import { notifyConfigChange } from './core/config-events.js';
 import { createEditSession } from './admin/edit-session.js';
 import { attachFieldValidation, validateFields, validateTimeZone } from './admin/validation.js';
 import { safeUrl } from '../shared/url.js';
-import { mountBackups } from './admin/backups.js';
 import { mountLayoutEditor } from './admin/layout-editor.js';
 import { setupWidgets } from './widget-editor.js';
 import { node } from './core/dom.js';
@@ -296,11 +295,18 @@ document.querySelector('#discard-yes').onclick = () => {
       },
     });
     session.saved();
-    mountBackups(document.querySelector('#backup-settings'), {
-      onRestored: () => session.allowLeave(),
-    });
+    const backup = document.querySelector('#backup-settings');
+    mountLazyPanel(
+      backup,
+      () => import('./admin/backups.js'),
+      (module) => module.mountBackups(backup, { onRestored: () => session.allowLeave() }),
+    );
     const panel = document.querySelector('#diagnostics-panel');
-    diagnosticsPanel = mountDiagnostics(panel);
+    diagnosticsPanel = mountLazyPanel(
+      panel,
+      () => import('./admin/diagnostics.js'),
+      (module) => module.mountDiagnostics(panel),
+    );
     panel.hidden = false;
     form.hidden = false;
     message.textContent = '仅管理员可访问和修改此页面。';

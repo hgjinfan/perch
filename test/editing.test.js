@@ -85,3 +85,29 @@ test('JSON field parsing catches incorrect shapes and unsafe header/path values 
   });
   assert.equal(parseJsonField('[{"label":"x","path":"cpu","scale":100}]', 'fields')[0].scale, 100);
 });
+
+test('lazy administrative panels load once even when their mount function returns no controller', async () => {
+  const { mountLazyPanel } = await import('../public/admin/lazy-panel.js');
+  const { document } = parseHTML('<details><p role="status"></p></details>');
+  const root = document.querySelector('details');
+  root.open = false;
+  let loads = 0,
+    mounts = 0;
+  const panel = mountLazyPanel(
+    root,
+    async () => {
+      loads++;
+      return {};
+    },
+    () => {
+      mounts++;
+    },
+  );
+  await panel.refresh();
+  assert.equal(loads, 0);
+  root.open = true;
+  await panel.refresh();
+  await panel.refresh();
+  assert.equal(loads, 1);
+  assert.equal(mounts, 1);
+});

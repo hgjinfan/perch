@@ -92,8 +92,8 @@
             <div id="projects-editor"></div>
             <button type="button" data-add="projects">＋ 添加项目</button>
           </section>
-          <section class="tile admin-section" id="backup-settings">
-            <h2>配置备份与恢复</h2>
+          <details class="tile admin-section" id="backup-settings">
+            <summary>配置备份与恢复</summary>
             <p class="muted">
               备份包含已保存的内容、布局和接口配置，不包含
               .env。直接写入配置的令牌也会导出，请妥善保存文件。
@@ -127,7 +127,7 @@
               <button id="backup-refresh" type="button">刷新记录</button>
               <div id="backup-history"></div>
             </details>
-          </section>
+          </details>
         </fieldset>
         <div class="save-row">
           <span id="edit-state" role="status">所有修改已保存</span>

@@ -3,6 +3,7 @@ import { isShellRequest } from './pwa/policy.js';
 // Replaced by the server using a hash of all public shell files.
 const VERSION = '__SHELL_VERSION__';
 const SHELL = ['__SHELL_FILES__'];
+const PRECACHE = ['__PRECACHE_FILES__'];
 const CACHE = `perch-shell-${VERSION}`;
 const OFFLINE = '__OFFLINE_URL__';
 
@@ -10,7 +11,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
-      await cache.addAll(SHELL);
+      await cache.addAll(PRECACHE);
     })(),
   );
 });
@@ -55,7 +56,10 @@ self.addEventListener('fetch', (event) => {
       // Keep one coherent shell version until the user accepts an available update.
       const cache = await caches.open(CACHE);
       const stored = await cache.match(event.request);
-      return stored || fetch(event.request);
+      if (stored) return stored;
+      const response = await fetch(event.request);
+      if (response.ok) await cache.put(event.request, response.clone());
+      return response;
     })(),
   );
 });

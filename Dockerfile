@@ -1,8 +1,17 @@
+FROM node:24-alpine AS client-build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY public ./public
+COPY shared ./shared
+COPY scripts ./scripts
+RUN npm run build
+
 FROM node:24-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
-COPY public ./public
+COPY --from=client-build /app/dist ./dist
 COPY src ./src
 COPY shared ./shared
 COPY config.json ./config.json
