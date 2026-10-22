@@ -7,7 +7,7 @@ import { mountBackups } from './admin/backups.js';
 import { mountLayoutEditor } from './admin/layout-editor.js';
 import { setupWidgets } from './widget-editor.js';
 import { node } from './core/dom.js';
-import { requestJson } from './core/api.js';
+import { requestJson, readConfigVersion } from './core/api.js';
 const form = document.querySelector('#admin-form');
 const message = document.querySelector('#admin-message');
 let config,
@@ -234,7 +234,7 @@ form.onsubmit = async (event) => {
       method: 'PUT',
       body: snapshot,
       headers: { 'If-Match': configVersion },
-      onResponse: (r) => (configVersion = r.headers.get('etag')),
+      onResponse: (r) => (configVersion = readConfigVersion(r)),
     });
     notifyConfigChange();
     diagnosticsPanel?.refresh();
@@ -276,7 +276,7 @@ document.querySelector('#discard-yes').onclick = () => {
 (async () => {
   try {
     const result = await requestJson('/api/admin/config', {
-      onResponse: (r) => (configVersion = r.headers.get('etag')),
+      onResponse: (r) => (configVersion = readConfigVersion(r)),
     });
     renderEditor(result);
     savedConfig = structuredClone(result);

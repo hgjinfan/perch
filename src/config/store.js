@@ -34,7 +34,11 @@ export async function createConfigStore({
       if (saving) throw new HttpError(409, '正在保存，请稍后重试');
       const version = '"' + createHash('sha256').update(JSON.stringify(config)).digest('hex') + '"';
       if (!expectedVersion) throw new HttpError(428, '保存需要配置版本，请重新打开管理页');
-      if (expectedVersion !== version)
+      // The same configuration digest may arrive with a weak marker after gzip.
+      // Compare the complete opaque digest; stale values still fail normally.
+      const expected =
+        typeof expectedVersion === 'string' ? expectedVersion.replace(/^W\//, '') : expectedVersion;
+      if (expected !== version)
         throw new HttpError(409, '配置已被其他页面更新，当前修改已保留，请对照最新配置合并');
       saving = true;
       try {

@@ -1,6 +1,16 @@
+// Compression proxies may weaken or replace the HTTP entity ETag. Prefer the
+// application-level config version; accept legacy weak ETags only as opaque tokens.
+export function readConfigVersion(response) {
+  const explicit = response.headers.get('x-config-version');
+  if (/^[a-f0-9]{64}$/.test(explicit || '')) return `"${explicit}"`;
+  const legacy = response.headers.get('etag')?.replace(/^W\//, '');
+  if (/^"[a-f0-9]{64}"$/.test(legacy || '')) return legacy;
+  throw new Error('无法读取配置版本，请检查反向代理是否保留 X-Config-Version 响应头');
+}
 export async function requestJson(path, { method = 'GET', body, headers = {}, onResponse } = {}) {
   const response = await fetch(path, {
     method,
+    cache: 'no-store',
     signal: AbortSignal.timeout(15000),
     headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),

@@ -144,3 +144,5 @@ PWA 只缓存静态资源与通用 `/offline.html`。动态首页与 `/fragments
 默认城市天气使用独立 admin-only weather service，onForecastEvent 仅记录固定 weather 键，强制 fixed 模式，访客天气、定位和搜索不进入诊断。缓存命中事件只更新到期信息，不伪造请求或成功时间。
 
 管理员 GET `/api/admin/diagnostics` 只读内存；POST `/api/admin/diagnostics/check` 仅接受已保存来源 ID，校验认证、同源、可见性、请求预算和配置一致性。公开 HTML/片段没有诊断详情。`public/admin/diagnostics.js` 展开时读取，单源显式检查，刷新记录与进行中检查协调；面板位于编辑 form 外，不影响编辑脏状态。
+
+管理配置与恢复操作同时返回独立 `X-Config-Version`（完整配置摘要）及兼容 ETag。`readConfigVersion()` 优先读取独立版本，回退时只接受完整强/弱摘要，不接受任意代理实体标签。store 仅移除弱标记后进行完整摘要比较，保留缺失版本 428 和过期版本 409；此兼容不跳过认证、同源检查或冲突保护。代理 gzip/弱 ETag 回归测试覆盖固定城市切换 IP、再次保存、旧标签拒绝及备份恢复。

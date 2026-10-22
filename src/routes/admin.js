@@ -7,6 +7,10 @@ import { renderPreview } from '../render/widgets.js';
 
 export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboard }) {
   const limitDiagnostics = createRequestLimiter({ limit: 30 });
+  function configVersionHeaders(response) {
+    response.setHeader('ETag', store.version);
+    response.setHeader('X-Config-Version', store.version.slice(1, -1));
+  }
   return async (path, request, response) => {
     guard(request, response);
     if (path === '/api/admin/diagnostics') {
@@ -43,22 +47,22 @@ export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboar
       requireSameOriginJson(request);
       const config = parseBackup(await readJson(request, BACKUP_LIMIT));
       if (path.endsWith('/preview')) {
-        response.setHeader('ETag', store.version);
+        configVersionHeaders(response);
         return json(response, summarizeConfig(config));
       }
       await store.save(config, request.headers['if-match'], { recovery: true });
-      response.setHeader('ETag', store.version);
+      configVersionHeaders(response);
       return json(response, { restored: true });
     }
     if (path === '/api/admin/config') {
       if (request.method === 'GET') {
-        response.setHeader('ETag', store.version);
+        configVersionHeaders(response);
         return json(response, store.get());
       }
       requireMethod(request, 'PUT');
       requireSameOriginJson(request);
       const saved = await store.save(await readJson(request), request.headers['if-match']);
-      response.setHeader('ETag', store.version);
+      configVersionHeaders(response);
       return json(response, saved);
     }
     if (path === '/api/admin/widget-preview') {

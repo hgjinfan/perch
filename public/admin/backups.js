@@ -1,5 +1,5 @@
 import { notifyConfigChange } from '../core/config-events.js';
-import { requestJson } from '../core/api.js';
+import { requestJson, readConfigVersion } from '../core/api.js';
 import { node } from '../core/dom.js';
 const MAX_BYTES = 1024 * 1024;
 export function mountBackups(root, { onRestored = () => {} } = {}) {
@@ -40,7 +40,7 @@ export function mountBackups(root, { onRestored = () => {} } = {}) {
       const info = await requestJson('/api/admin/backup/preview', {
         method: 'POST',
         body: backup,
-        onResponse: (r) => (nextVersion = r.headers.get('etag')),
+        onResponse: (r) => (nextVersion = readConfigVersion(r)),
       });
       if (current !== epoch) return;
       pending = backup;
