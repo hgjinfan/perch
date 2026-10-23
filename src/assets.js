@@ -1,3 +1,4 @@
+import { createThemeBootstrap } from './theme-bootstrap.js';
 import { createBuiltAssets } from './built-assets.js';
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve, extname, relative, sep } from 'node:path';
@@ -38,6 +39,7 @@ export async function createAssets(root, { mode = 'source', directory } = {}) {
   }
   await collect(resolve(root, 'public'), '');
   await collect(resolve(root, 'shared'), '/shared');
+  const theme = createThemeBootstrap(files.get('/pwa/theme.js').body.toString());
   const hash = createHash('sha256');
   for (const [path, file] of [...files].sort(([a], [b]) => a.localeCompare(b)))
     hash.update(path).update(file.body);
@@ -47,7 +49,8 @@ export async function createAssets(root, { mode = 'source', directory } = {}) {
     const type = extname(path);
     let source = file.body.toString('utf8');
     if (type === '.js') source = await versionModule(source, path, urlFor, (p) => files.has(p));
-    else if (type === '.html') source = versionHtml(source, urlFor, (p) => files.has(p));
+    else if (type === '.html')
+      source = versionHtml(theme.render(source), urlFor, (p) => files.has(p));
     else if (type === '.webmanifest') {
       const manifest = JSON.parse(source);
       for (const icon of manifest.icons || []) if (files.has(icon.src)) icon.src = urlFor(icon.src);
@@ -67,6 +70,7 @@ export async function createAssets(root, { mode = 'source', directory } = {}) {
   }
   return {
     version,
+    scriptHashes: [theme.hash],
     urlFor,
     homeShell: files.get('/index.html').body.toString(),
     isAdmin: (path) => path.startsWith('/api/admin/') || assetFor(path)?.admin,

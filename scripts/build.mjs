@@ -31,7 +31,7 @@ for (const [scope, entries] of [
     entryPoints: entries,
     outdir: resolve(out, scope),
     bundle: true,
-    splitting: true,
+    splitting: scope === 'admin',
     format: 'esm',
     platform: 'browser',
     target: 'es2022',

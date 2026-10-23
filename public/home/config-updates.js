@@ -7,8 +7,9 @@ export function createConfigWatcher({
   now = Date.now,
   active = () => !document.hidden && navigator.onLine,
   interval = 30000,
+  deferInitial = false,
 }) {
-  let checkedAt = -Infinity,
+  let checkedAt = deferInitial ? now() : -Infinity,
     flight,
     changed = false;
   function check(force = false) {
@@ -59,6 +60,7 @@ export function setupConfigUpdates({ onConfig } = {}) {
   const watcher = createConfigWatcher({
     baseline: document.documentElement.dataset.pageVersion,
     interval: 10000,
+    deferInitial: true,
     onChange: async ({ reason, version }) => {
       latest = version;
       if (reason === 'config' && onConfig) {

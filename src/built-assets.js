@@ -1,3 +1,4 @@
+import { createThemeBootstrap } from './theme-bootstrap.js';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -21,9 +22,16 @@ export async function createBuiltAssets(root, { directory = resolve(root, 'dist/
   }
   const urlFor = (path) => aliases[path] || path,
     known = (path) => files.has(urlFor(path));
-  for (const path of ['/index.html', '/admin.html', '/offline.html', '/launch.html']) {
+  const theme = createThemeBootstrap(files.get(urlFor('/pwa/theme.js')).body.toString());
+  for (const path of [
+    '/index.html',
+    '/admin.html',
+    '/offline.html',
+    '/launch.html',
+    '/setup.html',
+  ]) {
     const file = files.get(path);
-    const source = file.body.toString();
+    const source = theme.render(file.body.toString());
     file.body = Buffer.from(versionHtml(source, urlFor, known));
   }
   const appManifest = files.get('/manifest.webmanifest');
@@ -46,6 +54,7 @@ export async function createBuiltAssets(root, { directory = resolve(root, 'dist/
   };
   return {
     version: manifest.version,
+    scriptHashes: [theme.hash],
     urlFor,
     homeShell: files.get('/index.html').body.toString(),
     isAdmin: (path) =>

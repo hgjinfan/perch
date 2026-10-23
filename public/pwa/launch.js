@@ -1,7 +1,9 @@
+import { restoreLayout } from './layout-cache.js';
 import { launchHomepage } from './startup.js';
 const message = document.querySelector('#launch-message'),
   retry = document.querySelector('#launch-retry'),
   actions = document.querySelector('#launch-actions');
+const stopLayout = restoreLayout();
 let busy = false,
   completed = false;
 async function start() {
@@ -13,6 +15,7 @@ async function start() {
   try {
     await launchHomepage();
     completed = true;
+    stopLayout?.();
     window.removeEventListener('online', start);
   } catch {
     message.textContent = navigator.onLine

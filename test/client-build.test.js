@@ -1,4 +1,6 @@
 import test from 'node:test';
+import { createHash } from 'node:crypto';
+import { init, parse } from 'es-module-lexer/minimal';
 import assert from 'node:assert/strict';
 import { readFile, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -30,14 +32,21 @@ test('production emits small hashed public assets, isolated admin lazy chunks an
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   t.after(() => new Promise((r) => server.close(r)));
   const base = `http://127.0.0.1:${server.address().port}`;
-  const markup = await (await fetch(base)).text();
+  const homeResponse = await fetch(base);
+  const markup = await homeResponse.text();
   assert.ok(markup.includes(manifest.aliases['/app.js']));
   assert.ok(!markup.includes('/icons.js'));
-  assert.ok(markup.includes(manifest.aliases['/pwa/theme.js']));
+  assert.ok(!markup.includes(manifest.aliases['/pwa/theme.js']));
+  assert.ok(/<script>/.test(markup));
+  const themeInline = markup.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const themeHash = createHash('sha256').update(themeInline).digest('base64');
+  assert.ok(homeResponse.headers.get('content-security-policy').includes(`'sha256-${themeHash}'`));
+  assert.ok(!homeResponse.headers.get('content-security-policy').includes('unsafe-inline'));
+
   const launchResponse = await fetch(base + '/launch.html');
   const launch = await launchResponse.text();
   assert.ok(launch.includes(manifest.aliases['/pwa/launch.js']));
-  assert.ok(launch.includes(manifest.aliases['/pwa/theme.js']));
+  assert.ok(!launch.includes(manifest.aliases['/pwa/theme.js']));
   assert.ok(!launch.includes('data-page-version='));
   const themeSource = await (await fetch(base + manifest.aliases['/pwa/theme.js'])).text();
   assert.ok(
@@ -51,6 +60,17 @@ test('production emits small hashed public assets, isolated admin lazy chunks an
   let bytes = 0;
   for (const file of publicFiles) bytes += (await readFile(resolve(directory, file.disk))).length;
   assert.ok(bytes < 80000, `public eager budget exceeded: ${bytes}`);
+  await init();
+  for (const file of publicFiles.filter((file) => file.url.endsWith('.js'))) {
+    const source = await readFile(resolve(directory, file.disk), 'utf8');
+    const [imports] = parse(source);
+    assert.equal(
+      imports.filter((item) => item.d === -1).length,
+      0,
+      `public entry must not create a static import waterfall: ${file.url}`,
+    );
+  }
+
   assert.ok(!manifest.files.some((f) => f.url.endsWith('.map')));
   assert.ok(manifest.files.some((f) => f.admin && /chunks\/backups-/.test(f.url)));
   assert.ok(manifest.files.some((f) => f.admin && /chunks\/diagnostics-/.test(f.url)));

@@ -77,6 +77,7 @@ export async function createConfigStore({
         await backups.write(config, { reason: recovery ? 'restore' : 'save' });
         await persist(statePath, next);
         config = next;
+        initialized = true;
         revision += 1;
         return next;
       } finally {

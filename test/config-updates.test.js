@@ -135,3 +135,31 @@ test('unchanged, malformed and failed checks remain silent and recover on the ne
   assert.equal(notified, 1);
   assert.equal(count, 4);
 });
+
+test('fresh document defers redundant initial polling but still allows cross-tab changes and regular checks', async () => {
+  let time = 0,
+    calls = 0;
+  const watcher = createConfigWatcher({
+    baseline: a,
+    deferInitial: true,
+    interval: 10000,
+    now: () => time,
+    active: () => true,
+    fetcher: async () => {
+      calls++;
+      return response(a, 304);
+    },
+    onChange: () => assert.fail(),
+  });
+  await watcher.check();
+  assert.equal(calls, 0);
+  time = 5000;
+  await watcher.check();
+  assert.equal(calls, 0);
+  time = 10000;
+  await watcher.check();
+  assert.equal(calls, 1);
+  time = 12001;
+  await watcher.check(true);
+  assert.equal(calls, 2);
+});

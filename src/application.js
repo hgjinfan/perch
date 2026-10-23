@@ -7,7 +7,23 @@ import { createAdminRoutes } from './routes/admin.js';
 import { createPublicRoutes } from './routes/public.js';
 import { HttpError, json, securityHeaders } from './http.js';
 import { html, empty } from './render/html.js';
-import { readJson, requireMethod } from './http.js';
+import { readJson, requireMethod, requireSameOriginJson } from './http.js';
+import { normalizeIp } from './client-ip.js';
+
+function requireLocalSetup(request) {
+  let hostname;
+  try {
+    hostname = new URL(`http://${request.headers.host}`).hostname;
+  } catch {}
+  if (
+    !['127.0.0.1', '::1'].includes(normalizeIp(request.socket.remoteAddress)) ||
+    !['localhost', '127.0.0.1', '[::1]'].includes(hostname) ||
+    ['forwarded', 'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-real-ip'].some(
+      (key) => request.headers[key] !== undefined,
+    )
+  )
+    throw new HttpError(403, '首次初始化仅允许直接本机访问');
+}
 
 export async function createApplication({
   root,
@@ -29,16 +45,17 @@ export async function createApplication({
   const admin = createAdminRoutes({ store, assets, guard, fetcher, env, dashboard });
   const publicRoutes = createPublicRoutes({ store, dashboard, assets, shell: assets.homeShell });
   return createServer(async (request, response) => {
-    securityHeaders(response);
+    securityHeaders(response, { scriptHashes: assets.scriptHashes });
     try {
       const path = new URL(request.url, 'http://localhost').pathname;
       if (path === '/api/setup') {
         requireMethod(request, 'GET', 'POST');
-        if (request.socket.remoteAddress !== '127.0.0.1' && request.socket.remoteAddress !== '::1')
-          throw new HttpError(403, '首次初始化仅允许本机访问');
+        requireLocalSetup(request);
+        guard(request, response);
         if (store.initialized) throw new HttpError(409, '首页已经完成初始化');
         if (request.method === 'GET')
           return json(response, { initialized: false, config: store.get() });
+        requireSameOriginJson(request);
         const body = await readJson(request, 1024 * 32);
         const current = store.get();
         const next = {
@@ -52,8 +69,8 @@ export async function createApplication({
       }
       if (path === '/setup' && !store.initialized) {
         requireMethod(request, 'GET', 'HEAD');
-        if (request.socket.remoteAddress !== '127.0.0.1' && request.socket.remoteAddress !== '::1')
-          throw new HttpError(403, '首次初始化仅允许本机访问');
+        requireLocalSetup(request);
+        guard(request, response);
         return assets.send('/setup.html', request, response);
       }
       await (assets.isAdmin(path) ? admin : publicRoutes)(path, request, response);

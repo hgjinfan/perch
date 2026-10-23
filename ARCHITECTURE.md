@@ -182,10 +182,24 @@ page-sync.js 通过新版本文档地址取同版 DOM，只在响应版本相符
 
 `launch.html` 及 pwa/launch.js/startup.js 是无配置的公共预缓存资源，manifest start_url 指向 launch.html、id/scope 保持根路径。SW 对根首页和版本文档的导航立即返回已缓存启动壳，不等网络失败；启动脚本的 fetch 不是 navigate，且动态文档不在静态 allowlist，避免递归和内容离线落盘。direct 查询参数提供正常网络导航的逃生入口，管理路径不受影响。
 
-startup 校验文档版本、入口模块和样式的同源哈希路径；先准备当前资源，再替换 body 并导入当前 app。激活失败恢复启动 DOM 与元信息，提供重试和直接导航；成功后解除 online 启动监听，避免后续联网重复挂载应用。pwa/theme.js 是无 import/export 的独立经典脚本，在样式前从本地偏好应用主题，CSP 仍为 self，不允许内联脚本。缓存安装失败或首次未受控访问仍走原来的网络首页。
+startup 校验文档版本、入口模块和样式的同源哈希路径；先准备当前资源，再替换 body 并导入当前 app。激活失败恢复启动 DOM 与元信息，提供重试和直接导航；成功后解除 online 启动监听，避免后续联网重复挂载应用。pwa/theme.js 是无 import/export 的固定主题代码，由资源工厂内联到 HTML，并用精确 SHA-256 CSP 哈希授权；不使用 unsafe-inline，在样式前从本地偏好应用主题。缓存安装失败或首次未受控访问仍走原来的网络首页。
 
 ## 单次启动加载过渡
 
 pwa/initial-content.js 在脱离可见 DOM 的服务端文档上预取首批片段，最多 4 个并发、900ms 等待窗口；与样式/模块资源准备并行。所有结果经 home/fragment-content.js 与常规加载器共用解析/应用逻辑，保留服务入口 DOM 与天气标题约定。遇到版本失效拒绝挂载；普通错误仅影响对应磁块。
 
 准备完毕再整体显示首页：成功磁块标记 initialHydrated，首次调度只消费该标记，避免重复请求；尚未完成的模块用轻量加载文本替换数据骨架，并标记 initialPending。createModuleState 不为该次初始请求恢复骨架，成功或失败后清除标记，之后的重试沿用正常加载机制。动态内容只在内存中准备，不写入启动缓存。
+
+## 结构化启动布局缓存
+
+`pwa/layout-cache.js` 从成功挂载的 #board 提取白名单结构，`app.mountBoard` 在首次进入和配置同步后更新 localStorage。服务端 `renderModule` 只额外输出 placeholder kind/rows，避免从业务内容推断或序列化 DOM。缓存含 schema version、30 天有效期、公开版本和几何枚举；限制 16KB 读取、12 组、64 块、40 服务和每块 1–8 行，未知字段重建时丢弃，存储/JSON 异常回退通用骨架。density 使用 schema 的 comfortable/compact。
+
+启动脚本在网络读取前 restoreLayout，以 createElement 和校验后的枚举构造无标题/ID/URL/数据的占位；复用 content-board、data-columns、data-span 和 ResizeObserver，自适应宽度。成功进入真实页面后断开启动骨架的 observer；失败保留同一骨架供重试。缓存不覆盖服务端当前版本，也不参与请求缓存或模块访问规则。
+
+## 首屏依赖链预算
+
+public 入口使用 bundle=true/splitting=false，避免几 KB 的公共 chunk 增加一个发现阶段；admin 仍 splitting=true，保留工具动态加载和权限隔离。构建回归测试解析公开 JS，禁止静态 import 瀑布，并继续检查管理延迟分块存在。
+
+theme-bootstrap.js 对实际主题源码进行 HTML closing-tag 转义，针对最终 script body 计算 CSP hash。source/built 两个资源工厂在 URL 改写前内联固定代码并暴露 scriptHashes，application 交给 securityHeaders 严格格式校验后拼入 CSP。配置和用户内容不参与此脚本生成，style-src 等策略保持原边界。
+
+配置 watcher 的 deferInitial 只对 freshly mounted 首页启用，首次常规轮询约 10 秒后开始；force 检查仍保留 2 秒节流。移除 app 首屏立即 check，避免无配置正文的检查挤入内容请求阶段。

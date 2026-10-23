@@ -1,3 +1,4 @@
+import { rememberLayout } from './pwa/layout-cache.js';
 import { synchronizePage } from './home/page-sync.js';
 import { setupConfigUpdates } from './home/config-updates.js';
 import { setupTileLayout } from './home/tile-layout.js';
@@ -30,6 +31,7 @@ function mountBoard() {
   busy = false;
   updateDate();
   refresh(true);
+  rememberLayout();
 }
 function updateDate() {
   const date = document.querySelector('#date');
@@ -69,7 +71,6 @@ setupPwa({
   },
 });
 mountBoard();
-configUpdates.check();
 setInterval(resume, 5000);
 document.addEventListener('visibilitychange', () => resume(true));
 window.addEventListener('focus', () => resume(true));

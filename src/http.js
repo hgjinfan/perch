@@ -49,11 +49,15 @@ export function requireSameOriginJson(request) {
   }
 }
 
-export function securityHeaders(response) {
+export function securityHeaders(response, { scriptHashes = [] } = {}) {
+  const allowedScripts = scriptHashes
+    .filter((hash) => /^sha256-[A-Za-z0-9+/]{43}=$/.test(hash))
+    .map((hash) => ` '${hash}'`)
+    .join('');
   response.setHeader('X-Content-Type-Options', 'nosniff');
   response.setHeader('Referrer-Policy', 'no-referrer');
   response.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'",
+    `default-src 'self'; script-src 'self'${allowedScripts}; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'`,
   );
 }

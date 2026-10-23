@@ -1202,3 +1202,7 @@ progress.warning::-moz-progress-bar {
   color: var(--sub);
   font-size: 12px;
 }
+
+.launch-skeleton .group-title .skeleton-heading {
+  margin: 0;
+}
