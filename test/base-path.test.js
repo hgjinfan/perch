@@ -29,6 +29,20 @@ test('application assets, routes, and PWA metadata honor BASE_PATH', async (t) =
   t.after(() => new Promise((resolve) => server.close(resolve)));
   const base = `http://127.0.0.1:${server.address().port}`;
 
+  for (const method of ['GET', 'HEAD']) {
+    const redirect = await fetch(`${base}/perch/demo?direct=1&city=test`, {
+      method,
+      redirect: 'manual',
+    });
+    assert.equal(redirect.status, 308);
+    assert.equal(redirect.headers.get('location'), '/perch/demo/?direct=1&city=test');
+    assert.equal(redirect.headers.get('cache-control'), 'no-store');
+    assert.equal(await redirect.text(), '');
+  }
+  const canonical = await fetch(`${base}/perch/demo`);
+  assert.equal(canonical.url, `${base}/perch/demo/`);
+  assert.equal(canonical.status, 200);
+
   const page = await fetch(`${base}/perch/demo/`);
   const markup = await page.text();
   assert.equal(page.status, 200);

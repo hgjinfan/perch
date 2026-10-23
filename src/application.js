@@ -60,7 +60,16 @@ export async function createApplication({
     securityHeaders(response, { scriptHashes: assets.scriptHashes });
     let path = '/';
     try {
-      path = stripBasePath(new URL(request.url, 'http://localhost').pathname, basePath);
+      const url = new URL(request.url, 'http://localhost');
+      if (basePath && url.pathname === basePath) {
+        requireMethod(request, 'GET', 'HEAD');
+        response.writeHead(308, {
+          Location: `${basePath}/${url.search}`,
+          'Cache-Control': 'no-store',
+        });
+        return response.end();
+      }
+      path = stripBasePath(url.pathname, basePath);
       if (path === '/api/setup') {
         requireMethod(request, 'GET', 'POST');
         requireLocalSetup(request);
