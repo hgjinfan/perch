@@ -11,9 +11,9 @@ export function parseFragment(markup, host = document) {
 export function applyFragment(module, fragment, serviceTiles) {
   const id = module.node.dataset.module;
   if (fragment.dataset.updatedAt) {
-    const time = id === 'status' ? document.querySelector('#service-freshness') : null;
+    const time = id === 'status' ? module.node.querySelector('#service-freshness') : null;
     if (time) {
-      time.dateTime = fragment.dataset.updatedAt;
+      time.setAttribute('datetime', fragment.dataset.updatedAt);
       time.classList.toggle('stale', fragment.dataset.state === 'stale');
       time.hidden = false;
       updateFreshness(time.parentNode);
