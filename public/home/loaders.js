@@ -1,6 +1,6 @@
+import { parseFragment, applyFragment } from './fragment-content.js';
 import { bindWeatherHours, restoreWeatherHour } from './weather-hours.js';
 import { requestHtml } from '../core/api.js';
-import { icons } from '../core/dom.js';
 import { bindWeatherPicker, weatherFragmentUrl } from './weather.js';
 
 export function createLoaders({ modules, serviceTiles }) {
@@ -15,6 +15,10 @@ export function createLoaders({ modules, serviceTiles }) {
     };
     async function load() {
       if (module.node.hidden || !module.node.isConnected || !module.node.dataset.fragment) return;
+      if (module.node.dataset.initialHydrated === 'true') {
+        delete module.node.dataset.initialHydrated;
+        return;
+      }
       controller?.abort();
       controller = new AbortController();
       const current = ++sequence;
@@ -25,34 +29,14 @@ export function createLoaders({ modules, serviceTiles }) {
           signal: controller.signal,
         });
         if (current !== sequence || !module.node.isConnected) return;
-        const template = document.createElement('template');
-        template.innerHTML = markup;
-        const fragment = template.content.querySelector('[data-fragment-result]');
-        if (!fragment) throw new Error('Invalid fragment');
-        const title = fragment.dataset.title;
+        const fragment = parseFragment(markup);
         const focusedKey =
           id === 'weather' && module.content.contains(document.activeElement)
             ? document.activeElement.closest('[data-weather-hour]')?.dataset.weatherHour
             : null;
-        if (id !== 'status') module.content.replaceChildren(...fragment.childNodes);
-        if (title) module.node.querySelector('[data-module-title]').textContent = title;
+        applyFragment(module, fragment, serviceTiles);
         if (id === 'weather') restoreWeatherHour(module, focusedKey);
-        if (id === 'status') {
-          for (const state of fragment.querySelectorAll('[data-service-status]')) {
-            const tile = serviceTiles.get(state.dataset.serviceStatus),
-              slot = tile?.querySelector('[data-service-state-slot]');
-            if (!slot) continue;
-            slot.replaceWith(state);
-            tile.title = state.title;
-            if (fragment.dataset.state === 'stale') {
-              state.classList.add('service-stale');
-              tile.title += '（上次检测结果）';
-              state.querySelector('.service-detail').textContent = tile.title;
-            }
-          }
-        }
         module.loading.settle();
-        icons();
       } catch (error) {
         if (current !== sequence || !module.node.isConnected) return;
         if (error.reload) {

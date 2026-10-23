@@ -93,14 +93,14 @@ npm test
 
 HTML 与 JSON 采用同一认证/同源检查框架。HTML 片段由服务端模板转义，客户端仅接受 `text/html` 和约定的结果根节点。管理员预览直接使用同一磁块渲染器，不保留第二套前端渲染实现。
 
-PWA 只缓存静态资源与通用 `/offline.html`。动态首页与 `/fragments/` 不写入 Cache Storage，避免保存个性化位置与业务数据；测试同时覆盖旧缓存清理及离线导航回退。
+PWA 只缓存静态资源与通用 `/launch.html`、`/offline.html`。动态首页与 `/fragments/` 不写入 Cache Storage，避免保存个性化位置与业务数据；测试同时覆盖旧缓存清理及离线导航回退。
 
 服务状态是顶部 `.service-region` 的动态部分，不在内容区模块描述中重复创建卡片。通用加载器对该片段只替换 `[data-service-state-slot]`，保留服务链接 DOM；状态错误提示使用独立反馈区。
 
 ## Review 修复后的约束
 
 - `scripts/build.mjs` 分别构建公开与管理资源，防止私有模块进入公开分块；`built-assets.js` 仅服务构建清单中的文件。公开内容哈希资源长期缓存，管理资源认证且 no-store。开发模式由 `asset-version.js` 改写原生依赖图。两种模式都由 `pwa.js` 生成同版离线清单，版本片段仅接受当前发布版本。
-- PWA 区分允许缓存的静态清单与安装预缓存清单，完整图标分块按需加载后缓存。备份、诊断工具通过动态 import 加载；管理分块不进入任何离线清单。构建只读取客户端源码和模板，不读取运行配置或数据目录。
+- PWA 区分允许缓存的静态清单与安装预缓存清单；图标为服务端内联 SVG，不进入客户端资源清单。备份、诊断工具通过动态 import 加载；管理分块不进入任何离线清单。构建只读取客户端源码和模板，不读取运行配置或数据目录。
 - `store.save(value, expectedVersion)` 使用配置内容 ETag 阻止过期覆盖；前端保存冲突保留表单，预览以编辑快照及请求序号失效。
 - `services/weather-data.js` 校验并规范化天气数据；`request-budget.js` 管理访客窗口、上游并发、有限排队及供应商冷却。登录和公开天气预算共用可信代理地址规则。
 
@@ -170,4 +170,22 @@ PWA 只缓存静态资源与通用 `/offline.html`。动态首页与 `/fragments
 
 首页与 `/page/<build>/<token>` 均 no-store；`/page/latest` 和旧文档地址以 no-store 临时重定向到当前版本。ready 的公开片段有限 s-maxage（RSS/磁块 60 秒以内，状态 15 秒），浏览器 max-age=0；天气/搜索、stale/error 及管理响应不共享缓存。html() 对可缓存正文生成内容 ETag，支持 HEAD 和强弱/多值条件请求；错误不会继承可缓存头。
 
-page-sync.js 通过新版本文档地址取同版 DOM，只在响应版本相符且磁块内无焦点时替换 board。app.mountBoard 取消旧片段加载、断开旧 ResizeObserver，重建模块和调度器；旧调度批次不能写入新页面状态。成功同步后 watcher 更新 baseline 并继续检查；失败或焦点保护会重试，构建版本变化仅提示更新脚本。访客主题属性和本地选城不变，不执行响应内脚本。SW 仅为版本文档的导航提供通用离线回退，不保存文档或片段。
+page-sync.js 通过新版本文档地址取同版 DOM，只在响应版本相符且磁块内无焦点时替换 board。app.mountBoard 取消旧片段加载、断开旧 ResizeObserver，重建模块和调度器；旧调度批次不能写入新页面状态。成功同步后 watcher 更新 baseline 并继续检查；失败或焦点保护会重试，构建版本变化仅提示更新脚本。访客主题属性和本地选城不变，不执行响应内脚本。SW 对首页/版本文档导航优先返回通用启动壳，不保存动态文档或片段；启动脚本再以非导航 no-store 请求读取最新页面。
+
+## 服务端图标
+
+`render/icons.js` 从服务端 Lucide 依赖中按名称读取可信 SVG 定义，转义属性后直接渲染 HTML。所有动态片段与首页共用同一 icon()；首页模板中安装/主题按钮的固定占位符在 renderHome 返回前转换。非法或不存在的名称回退 box，缓存以实际定义名为键，空间受库内图标数量限制。
+
+客户端无图标渲染器、Lucide import 或完整库回退；开发模式也不提供 icons.js。构建检查 public/admin 的 metafile，拒绝任何 Lucide 输入进入浏览器包，避免未来误引入。动态天气无需保留客户端图标集合。SVG 增加的字节随实际使用的 HTML 发送，不计入 JS/CSS 体积报告。依赖保留在生产 dependencies，版权许可见 THIRD_PARTY_NOTICES.md。
+
+## PWA 通用启动壳
+
+`launch.html` 及 pwa/launch.js/startup.js 是无配置的公共预缓存资源，manifest start_url 指向 launch.html、id/scope 保持根路径。SW 对根首页和版本文档的导航立即返回已缓存启动壳，不等网络失败；启动脚本的 fetch 不是 navigate，且动态文档不在静态 allowlist，避免递归和内容离线落盘。direct 查询参数提供正常网络导航的逃生入口，管理路径不受影响。
+
+startup 校验文档版本、入口模块和样式的同源哈希路径；先准备当前资源，再替换 body 并导入当前 app。激活失败恢复启动 DOM 与元信息，提供重试和直接导航；成功后解除 online 启动监听，避免后续联网重复挂载应用。pwa/theme.js 是无 import/export 的独立经典脚本，在样式前从本地偏好应用主题，CSP 仍为 self，不允许内联脚本。缓存安装失败或首次未受控访问仍走原来的网络首页。
+
+## 单次启动加载过渡
+
+pwa/initial-content.js 在脱离可见 DOM 的服务端文档上预取首批片段，最多 4 个并发、900ms 等待窗口；与样式/模块资源准备并行。所有结果经 home/fragment-content.js 与常规加载器共用解析/应用逻辑，保留服务入口 DOM 与天气标题约定。遇到版本失效拒绝挂载；普通错误仅影响对应磁块。
+
+准备完毕再整体显示首页：成功磁块标记 initialHydrated，首次调度只消费该标记，避免重复请求；尚未完成的模块用轻量加载文本替换数据骨架，并标记 initialPending。createModuleState 不为该次初始请求恢复骨架，成功或失败后清除标记，之后的重试沿用正常加载机制。动态内容只在内存中准备，不写入启动缓存。

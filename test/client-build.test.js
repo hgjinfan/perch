@@ -19,6 +19,7 @@ execFileSync(process.execPath, ['scripts/build.mjs'], {
 const manifest = JSON.parse(await readFile(resolve(directory, 'manifest.json'), 'utf8'));
 test('production emits small hashed public assets, isolated admin lazy chunks and no source maps', async (t) => {
   const config = validateConfig(JSON.parse(await readFile(resolve(root, 'config.json'), 'utf8')));
+  config.services[0].icon = 'terminal';
   const server = await createApplication({
     root,
     store: { get: () => config, revision: 0 },
@@ -32,6 +33,17 @@ test('production emits small hashed public assets, isolated admin lazy chunks an
   const markup = await (await fetch(base)).text();
   assert.ok(markup.includes(manifest.aliases['/app.js']));
   assert.ok(!markup.includes('/icons.js'));
+  assert.ok(markup.includes(manifest.aliases['/pwa/theme.js']));
+  const launchResponse = await fetch(base + '/launch.html');
+  const launch = await launchResponse.text();
+  assert.ok(launch.includes(manifest.aliases['/pwa/launch.js']));
+  assert.ok(launch.includes(manifest.aliases['/pwa/theme.js']));
+  assert.ok(!launch.includes('data-page-version='));
+  const themeSource = await (await fetch(base + manifest.aliases['/pwa/theme.js'])).text();
+  assert.ok(
+    !/\bimport\s|\bexport\s/.test(themeSource),
+    'early theme entry must remain a classic script',
+  );
   assert.ok(markup.includes(`/fragments/${manifest.version}/`));
   const publicFiles = manifest.files.filter(
     (f) => !f.admin && f.url.startsWith('/client/') && f.precache && /\.(js|css)$/.test(f.url),
@@ -42,8 +54,10 @@ test('production emits small hashed public assets, isolated admin lazy chunks an
   assert.ok(!manifest.files.some((f) => f.url.endsWith('.map')));
   assert.ok(manifest.files.some((f) => f.admin && /chunks\/backups-/.test(f.url)));
   assert.ok(manifest.files.some((f) => f.admin && /chunks\/diagnostics-/.test(f.url)));
-  const large = manifest.files.find((f) => /chunks\/lucide-/.test(f.url));
-  assert.ok(large && !large.precache);
+  assert.ok(!manifest.files.some((f) => /lucide|icons\.js/.test(f.url)));
+  assert.ok(markup.includes('data-lucide="terminal"'));
+  assert.ok(markup.includes('<svg'));
+  assert.ok(!markup.includes('<i data-lucide='));
   const asset = await fetch(base + manifest.aliases['/app.js']);
   assert.match(asset.headers.get('cache-control'), /immutable/);
   assert.equal(
@@ -95,14 +109,11 @@ test('production service worker precaches only eager public assets and offline s
     }
   });
   const shell = arrays.find(
-    (items) =>
-      items.includes(manifest.aliases['/app.js']) && items.some((s) => s.includes('/lucide-')),
+    (items) => items.includes(manifest.aliases['/app.js']) && items.includes('/offline.html'),
   );
-  const precache = arrays.find(
-    (items) =>
-      items.includes(manifest.aliases['/app.js']) && !items.some((s) => s.includes('/lucide-')),
-  );
-  assert.ok(shell && precache);
+  const precache = shell;
+  assert.ok(shell);
+  assert.ok(!shell.some((s) => /lucide|icons\.js/.test(s)));
   assert.ok(precache.includes('/offline.html'));
   assert.ok(!shell.some((s) => s.startsWith('/client/admin/')));
 });

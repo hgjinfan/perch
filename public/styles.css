@@ -32,6 +32,13 @@
 * {
   box-sizing: border-box;
 }
+html,
+body {
+  overflow-x: clip;
+}
+html {
+  overscroll-behavior-x: none;
+}
 body {
   margin: 0;
 }
@@ -95,6 +102,10 @@ header {
   gap: 22px;
 }
 .brand {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 23px;
   font-weight: 600;
   letter-spacing: -1px;
@@ -108,11 +119,13 @@ header {
   margin-left: 10px;
 }
 #date {
+  flex-shrink: 0;
   margin-left: auto;
   font-size: 12px;
   color: var(--sub);
 }
 nav {
+  flex-shrink: 0;
   display: flex;
   gap: 4px;
 }
@@ -181,6 +194,11 @@ nav {
   stroke-width: 1.6;
 }
 .app-name {
+  min-width: 0;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 500;
 }
@@ -245,6 +263,7 @@ nav {
   color: var(--sub);
 }
 .heading-link {
+  flex-shrink: 0;
   margin-left: auto;
   display: inline-flex;
   color: var(--sub);
@@ -386,6 +405,9 @@ nav {
   margin-top: 5px;
 }
 .chips a {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -904,6 +926,9 @@ progress.warning::-moz-progress-bar {
   font-size: 11px;
 }
 .hourly-scroll {
+  min-width: 0;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
   overflow-x: auto;
   padding: 6px 4px 3px;
   scrollbar-width: thin;
@@ -965,7 +990,7 @@ progress.warning::-moz-progress-bar {
 .skeleton-hours .skeleton-short {
   width: 8px;
 }
-@media (pointer: coarse) {
+@media (pointer: coarse), (max-width: 520px) {
   .hourly-chart {
     grid-template-columns: repeat(12, 44px);
     gap: 2px;
@@ -1082,5 +1107,89 @@ progress.warning::-moz-progress-bar {
   color: var(--accent);
   border: 1px solid var(--line);
   border-radius: 6px;
+  font-size: 12px;
+}
+
+/* Text must shrink or wrap within its grid track rather than widen the page. */
+[data-module-title],
+.group-title,
+.state-label,
+.hourly-detail {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.service-grid > .app:nth-child(6n + 1) .service-detail {
+  left: 0;
+  transform: none;
+}
+.service-grid > .app:nth-child(6n) .service-detail {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+@media (max-width: 800px) {
+  .service-grid > .app:nth-child(3n + 1) .service-detail {
+    left: 0;
+    right: auto;
+    transform: none;
+  }
+  .service-grid > .app:nth-child(3n) .service-detail {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+}
+
+.launch-shell {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.launch-status {
+  margin-left: auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.launch-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: var(--gap);
+}
+.launch-actions[hidden] {
+  display: none;
+}
+.launch-actions button {
+  border: 1px solid var(--line);
+  padding: 0 12px;
+}
+.launch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+@media (max-width: 800px) {
+  .launch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .launch-grid > :nth-child(n + 3) {
+    display: none;
+  }
+}
+@media (max-width: 520px) {
+  .launch-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .launch-grid > :nth-child(n + 3) {
+    display: none;
+  }
+}
+
+.initial-module-loading {
+  margin: 8px 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  color: var(--sub);
   font-size: 12px;
 }

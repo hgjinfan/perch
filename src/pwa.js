@@ -14,5 +14,6 @@ export async function buildServiceWorker(files, { version, urlFor }) {
     .replace('__SHELL_VERSION__', version)
     .replace(/\[\s*['"]__SHELL_FILES__['"]\s*\]/, JSON.stringify(shell))
     .replace(/\[\s*['"]__PRECACHE_FILES__['"]\s*\]/, JSON.stringify(precache))
-    .replace('__OFFLINE_URL__', urlFor('/offline.html'));
+    .replace('__OFFLINE_URL__', urlFor('/offline.html'))
+    .replace('__LAUNCH_URL__', urlFor('/launch.html'));
 }

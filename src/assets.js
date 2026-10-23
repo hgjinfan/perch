@@ -38,8 +38,6 @@ export async function createAssets(root, { mode = 'source', directory } = {}) {
   }
   await collect(resolve(root, 'public'), '');
   await collect(resolve(root, 'shared'), '/shared');
-  const iconPath = resolve(root, 'node_modules/lucide/dist/umd/lucide.js');
-  files.set('/icons.js', { path: iconPath, admin: false, body: await readFile(iconPath) });
   const hash = createHash('sha256');
   for (const [path, file] of [...files].sort(([a], [b]) => a.localeCompare(b)))
     hash.update(path).update(file.body);

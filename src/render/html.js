@@ -1,3 +1,4 @@
+import { renderIcon } from './icons.js';
 import { createHash } from 'node:crypto';
 import { safeUrl } from '../../shared/url.js';
 
@@ -8,10 +9,7 @@ export function escapeHtml(value = '') {
   );
 }
 export const text = escapeHtml;
-export function icon(name) {
-  const safe = /^[a-z0-9-]{1,60}$/.test(name || '') ? name : 'box';
-  return `<i data-lucide="${safe}" aria-hidden="true"></i>`;
-}
+export const icon = renderIcon;
 export function link(url, label, className = '') {
   const href = safeUrl(url);
   return href

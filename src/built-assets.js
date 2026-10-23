@@ -21,11 +21,9 @@ export async function createBuiltAssets(root, { directory = resolve(root, 'dist/
   }
   const urlFor = (path) => aliases[path] || path,
     known = (path) => files.has(urlFor(path));
-  for (const path of ['/index.html', '/admin.html', '/offline.html']) {
+  for (const path of ['/index.html', '/admin.html', '/offline.html', '/launch.html']) {
     const file = files.get(path);
-    let source = file.body.toString();
-    if (path === '/index.html')
-      source = source.replace(/<script\b[^>]*src=["']\/icons.js["'][^>]*>\s*<\/script>/, '');
+    const source = file.body.toString();
     file.body = Buffer.from(versionHtml(source, urlFor, known));
   }
   const appManifest = files.get('/manifest.webmanifest');

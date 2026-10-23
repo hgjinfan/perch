@@ -28,7 +28,8 @@ test('Manifest has standalone mode and correctly sized raster icons', async () =
     await readFile(new URL('../public/manifest.webmanifest', import.meta.url)),
   );
   assert.equal(manifest.display, 'standalone');
-  assert.equal(manifest.start_url, '/');
+  assert.equal(manifest.start_url, '/launch.html');
+  assert.equal(manifest.id, '/');
   for (const icon of manifest.icons) {
     const bytes = await readFile(`${root}/public${icon.src}`);
     assert.equal(bytes.subarray(1, 4).toString(), 'PNG');
@@ -43,14 +44,18 @@ test('Worker shell includes module graph but excludes APIs and every admin entry
   const shell = JSON.parse(source.match(/const SHELL = (\[[\s\S]*?\]);/)[1]);
   for (const path of [
     '/offline.html',
+    '/launch.html',
+    '/pwa/launch.js',
+    '/pwa/theme.js',
+    '/pwa/startup.js',
     '/app.js',
     '/core/api.js',
     '/home/board.js',
     '/pwa/client.js',
-    '/icons.js',
   ])
     assert.ok(shell.some((url) => url.endsWith(path)));
   for (const path of [
+    '/icons.js',
     '/admin',
     '/admin/',
     '/admin.html',
@@ -87,13 +92,14 @@ test('Worker shell includes module graph but excludes APIs and every admin entry
   assert.equal(isShellRequest(new Request('https://other.example/'), origin, shell), false);
 });
 
-test('Installed shell serves offline without API interception; update activation is explicit', async () => {
+test('Installed launch shell opens immediately offline without API interception; updates remain explicit', async () => {
   const source = await worker();
   const events = {},
     stored = new Map();
   let offline = false,
     skipped = false,
-    claimed = false;
+    claimed = false,
+    networkCalls = 0;
   const cache = {
     async addAll(paths) {
       for (const path of paths)
@@ -131,6 +137,7 @@ test('Installed shell serves offline without API interception; update activation
       },
     },
     fetch: async () => {
+      networkCalls++;
       if (offline) throw new Error('offline');
       return new Response('network');
     },
@@ -158,7 +165,8 @@ test('Installed shell serves offline without API interception; update activation
       work = promise;
     },
   });
-  assert.ok((await (await work).text()).endsWith('/offline.html'));
+  assert.ok((await (await work).text()).endsWith('/launch.html'));
+  assert.equal(networkCalls, 0, 'cached startup must not wait on a navigation network request');
   events.fetch({
     request: {
       method: 'GET',
@@ -169,12 +177,23 @@ test('Installed shell serves offline without API interception; update activation
       work = promise;
     },
   });
-  assert.ok((await (await work).text()).endsWith('/offline.html'));
+  assert.ok((await (await work).text()).endsWith('/launch.html'));
 
   events.fetch({
     request: new Request('https://home.example/api/admin/config'),
     respondWith() {
       assert.fail('Admin must never be intercepted');
+    },
+  });
+  events.fetch({
+    request: {
+      method: 'GET',
+      mode: 'navigate',
+      url: 'https://home.example/?direct=1',
+      headers: new Headers(),
+    },
+    respondWith() {
+      assert.fail('Explicit direct navigation must bypass the launch shell');
     },
   });
   events.message({ data: { type: 'ACTIVATE_UPDATE' } });

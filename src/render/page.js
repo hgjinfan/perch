@@ -1,5 +1,5 @@
 import { renderGroups } from './groups.js';
-import { text } from './html.js';
+import { text, icon } from './html.js';
 import { renderServiceGrid } from './services.js';
 
 export function renderHome(config, shell, version, pageVersion) {
@@ -31,10 +31,13 @@ export function renderHome(config, shell, version, pageVersion) {
       /<main id="board"[^>]*>[\s\S]*?<\/main>/,
       () => `<main id="board" class="board" aria-label="个人仪表盘">${services}${modules}</main>`,
     );
+  const rendered = markup.replace(/<i data-lucide="([a-z0-9-]+)">\s*<\/i>/g, (_, name) =>
+    icon(name),
+  );
   return version
-    ? markup.replaceAll(
+    ? rendered.replaceAll(
         'data-fragment="/fragments/',
         `data-fragment="/fragments/${version}/${pageVersion?.slice(21) || ''}/`,
       )
-    : markup;
+    : rendered;
 }

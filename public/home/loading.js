@@ -16,16 +16,22 @@ export function createModuleState(module) {
       target.setAttribute('aria-busy', 'true');
       if (ready) {
         if (indicator) indicator.hidden = false;
-      } else if (!target.querySelector('.skeleton') && placeholder)
+      } else if (
+        !target.dataset.initialPending &&
+        !target.querySelector('.skeleton') &&
+        placeholder
+      )
         target.replaceChildren(placeholder.content.cloneNode(true));
     },
     settle() {
+      delete target.dataset.initialPending;
       ready = true;
       target.dataset.loadState = 'ready';
       stop();
     },
     fail(title, description, retry, retainedMessage = '更新失败，保留上次内容') {
       stop();
+      delete target.dataset.initialPending;
       if (!ready) {
         empty(target, title, description, retry);
         return;

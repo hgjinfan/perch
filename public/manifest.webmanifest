@@ -4,7 +4,7 @@
   "short_name": "Perch",
   "description": "安放服务与日常的个人首页。",
   "lang": "zh-CN",
-  "start_url": "/",
+  "start_url": "/launch.html",
   "scope": "/",
   "display": "standalone",
   "background_color": "#191c20",

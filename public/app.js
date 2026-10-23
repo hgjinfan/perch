@@ -2,7 +2,6 @@ import { synchronizePage } from './home/page-sync.js';
 import { setupConfigUpdates } from './home/config-updates.js';
 import { setupTileLayout } from './home/tile-layout.js';
 import { setupPwa } from './pwa/client.js';
-import { icons } from './core/dom.js';
 import { applyPreferences, toggleTheme } from './core/preferences.js';
 import { createScheduler } from './core/scheduler.js';
 import { mountModules } from './home/board.js';
@@ -29,7 +28,6 @@ function mountBoard() {
     scheduler.register(id, load, Math.max(30000, interval || 60000));
   }
   busy = false;
-  icons();
   updateDate();
   refresh(true);
 }
@@ -63,7 +61,6 @@ function resume(force = false) {
 }
 document.querySelector('#theme').onclick = toggleTheme;
 applyPreferences();
-icons();
 updateDate();
 setupPwa({
   reconnect: () => {

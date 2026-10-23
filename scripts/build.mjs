@@ -17,8 +17,10 @@ for (const [scope, entries] of [
   [
     'public',
     {
-      app: 'scripts/client-home.js',
+      app: 'public/app.js',
       offline: 'public/pwa/offline.js',
+      launch: 'public/pwa/launch.js',
+      theme: 'public/pwa/theme.js',
       styles: 'public/styles.css',
     },
   ],
@@ -50,6 +52,8 @@ for (const [scope, entries] of [
     )
   )
     throw new Error('Public bundle imports administrator-only code');
+  if (Object.keys(result.metafile.inputs).some((path) => path.includes('node_modules/lucide/')))
+    throw new Error('Client bundle must not include the server-side icon library');
   const outputs = result.metafile.outputs;
   const eager = new Set();
   function visit(path) {
@@ -71,8 +75,8 @@ for (const [scope, entries] of [
             ? '/admin.css'
             : name === 'styles'
               ? '/styles.css'
-              : name === 'offline'
-                ? '/pwa/offline.js'
+              : ['offline', 'launch', 'theme'].includes(name)
+                ? `/pwa/${name}.js`
                 : `/${name}.js`;
         aliases[canonical] = url;
       }
@@ -89,7 +93,13 @@ const sw = await build({
   legalComments: 'eof',
 });
 await writeFile(resolve(out, 'sw.js'), sw.outputFiles[0].contents);
-for (const name of ['index.html', 'admin.html', 'offline.html', 'manifest.webmanifest'])
+for (const name of [
+  'index.html',
+  'admin.html',
+  'offline.html',
+  'launch.html',
+  'manifest.webmanifest',
+])
   await copyFile(resolve(root, 'public', name), resolve(out, name));
 for (const path of [
   'favicon.svg',
@@ -111,6 +121,7 @@ for (const [url, disk, admin] of [
   ['/index.html', 'index.html', false],
   ['/admin.html', 'admin.html', true],
   ['/offline.html', 'offline.html', false],
+  ['/launch.html', 'launch.html', false],
   ['/manifest.webmanifest', 'manifest.webmanifest', false],
   ['/sw.js', 'sw.js', false],
 ])

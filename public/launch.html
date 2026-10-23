@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#191c20" />
+    <title>栖页 · Perch</title>
+    <script src="/pwa/theme.js"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/favicon.svg" />
+    <script type="module" src="/pwa/launch.js"></script>
+  </head>
+  <body>
+    <main class="shell launch-shell">
+      <header>
+        <a class="brand" href="/">perch<span>/ home</span></a>
+        <span id="launch-message" class="launch-status muted" role="status">正在加载…</span>
+      </header>
+      <div id="launch-actions" class="launch-actions" hidden>
+        <button type="button" id="launch-retry" hidden>重试</button>
+        <a class="muted" href="/?direct=1">直接打开首页</a>
+      </div>
+      <div class="launch-skeleton skeleton" aria-hidden="true">
+        <div class="service-grid">
+          <div class="tile app">
+            <span class="skeleton-bar skeleton-app-icon"></span
+            ><span class="skeleton-bar skeleton-medium"></span>
+          </div>
+          <div class="tile app">
+            <span class="skeleton-bar skeleton-app-icon"></span
+            ><span class="skeleton-bar skeleton-medium"></span>
+          </div>
+          <div class="tile app">
+            <span class="skeleton-bar skeleton-app-icon"></span
+            ><span class="skeleton-bar skeleton-medium"></span>
+          </div>
+          <div class="tile app">
+            <span class="skeleton-bar skeleton-app-icon"></span
+            ><span class="skeleton-bar skeleton-medium"></span>
+          </div>
+          <div class="tile app">
+            <span class="skeleton-bar skeleton-app-icon"></span
+            ><span class="skeleton-bar skeleton-medium"></span>
+          </div>
+          <div class="tile app">
+            <span class="skeleton-bar skeleton-app-icon"></span
+            ><span class="skeleton-bar skeleton-medium"></span>
+          </div>
+        </div>
+        <div class="launch-grid">
+          <div class="tile module">
+            <span class="skeleton-bar skeleton-heading"></span>
+            <div class="skeleton-row">
+              <span class="skeleton-bar"></span><span class="skeleton-bar skeleton-medium"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-bar"></span><span class="skeleton-bar skeleton-medium"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-bar"></span><span class="skeleton-bar skeleton-medium"></span>
+            </div>
+          </div>
+          <div class="tile module">
+            <span class="skeleton-bar skeleton-heading"></span>
+            <div class="skeleton-row">
+              <span class="skeleton-bar"></span><span class="skeleton-bar skeleton-medium"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-bar"></span><span class="skeleton-bar skeleton-medium"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-bar"></span><span class="skeleton-bar skeleton-medium"></span>
+            </div>
+          </div>
+          <div class="tile module">
+            <span class="skeleton-bar skeleton-heading"></span>
+            <div class="skeleton-row">
+              <span class="skeleton-bar"></span><span class="skeleton-bar skeleton-medium"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-bar"></span><span class="skeleton-bar skeleton-medium"></span>
+            </div>
+            <div class="skeleton-row">
+              <span class="skeleton-bar"></span><span class="skeleton-bar skeleton-medium"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <noscript
+        ><p>请启用 JavaScript，或<a href="/?direct=1">直接打开首页</a>。</p></noscript
+      >
+    </main>
+  </body>
+</html>

@@ -1,12 +1,5 @@
 import { safeUrl } from '../../shared/url.js';
 export { safeUrl } from '../../shared/url.js';
-export const icons = () => window.lucide?.createIcons();
-export const icon = (name) => {
-  const el = document.createElement('i');
-  el.dataset.lucide = name;
-  el.setAttribute('aria-hidden', 'true');
-  return el;
-};
 export function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;

@@ -6,6 +6,7 @@ const SHELL = ['__SHELL_FILES__'];
 const PRECACHE = ['__PRECACHE_FILES__'];
 const CACHE = `perch-shell-${VERSION}`;
 const OFFLINE = '__OFFLINE_URL__';
+const LAUNCH = '__LAUNCH_URL__';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -40,14 +41,21 @@ self.addEventListener('fetch', (event) => {
   if (
     event.request.mode === 'navigate' &&
     url.origin === self.location.origin &&
-    (['/', '/index.html'].includes(url.pathname) ||
+    !url.searchParams.has('direct') &&
+    (['/', '/index.html', '/launch.html'].includes(url.pathname) ||
       /^\/page\/(?:latest|[a-f0-9]{20}\/[a-f0-9]{32})$/.test(url.pathname))
   ) {
     event.respondWith(
-      fetch(event.request).catch(async () => {
+      (async () => {
         const cache = await caches.open(CACHE);
-        return (await cache.match(OFFLINE)) || Response.error();
-      }),
+        const launch = await cache.match(LAUNCH);
+        if (launch) return launch;
+        try {
+          return await fetch(event.request);
+        } catch {
+          return (await cache.match(OFFLINE)) || Response.error();
+        }
+      })(),
     );
     return;
   }
