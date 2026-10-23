@@ -118,7 +118,7 @@ test('restore rejects bad origin, versions, malformed files and oversized reques
   assert.equal((await request('backups/not-a-snapshot')).status, 404);
 });
 test('restore blocks stale previews after another save, and snapshot failure leaves original config untouched', async (t) => {
-  const { request, store } = await fixture(t),
+  const { request, store, directory } = await fixture(t),
     version = store.version;
   await store.save({ ...store.get(), title: '其他页面修改' }, version);
   assert.equal(
@@ -133,7 +133,7 @@ test('restore blocks stale previews after another save, and snapshot failure lea
   );
   assert.equal((await store.backups.list()).length, 1);
   const failing = await createConfigStore({
-    statePath: '/unused/test.json',
+    statePath: join(directory, 'failed-state.json'),
     configPath,
     persist: async () => {
       throw new Error('Must not write');

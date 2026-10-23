@@ -1,7 +1,9 @@
 import { fragmentFetch as fetch } from './helpers/fragment-fetch.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse, init } from 'es-module-lexer/minimal';
 import { createAssets } from '../src/assets.js';
@@ -9,7 +11,6 @@ import { createApplication } from '../src/application.js';
 import { validateConfig } from '../src/config/schema.js';
 import { createAdminGuard } from '../src/security.js';
 import { createConfigStore } from '../src/config/store.js';
-import { randomUUID } from 'node:crypto';
 import { parseHTML } from 'linkedom';
 import { mountWidgetPreview } from '../public/admin/widget-preview.js';
 import { createWeatherService } from '../src/services/weather.js';
@@ -165,11 +166,12 @@ test('R5: malformed current weather fails closed and retains last good forecast 
   assert.equal((await fresh.get(city, request)).state, 'error');
 });
 
-test('R3: stale config snapshots cannot overwrite a later save; missing version is rejected', async () => {
+test('R3: stale config snapshots cannot overwrite a later save; missing version is rejected', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'perch-stale-config-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
   const store = await createConfigStore({
-    statePath: '/private/tmp/' + randomUUID() + '.json',
+    statePath: join(directory, 'site.json'),
     configPath: root + 'config.json',
-    persist: async () => {},
   });
   const initial = store.version,
     a = structuredClone(store.get()),
@@ -182,6 +184,8 @@ test('R3: stale config snapshots cannot overwrite a later save; missing version 
   await assert.rejects(store.save(a), (error) => error.status === 428);
   await store.save(a, store.version);
   assert.equal(store.get().title, 'A stale');
+  assert.equal((await store.backups.list()).length, 2);
+  assert.equal(JSON.parse(await readFile(join(directory, 'site.json'), 'utf8')).title, 'A stale');
 });
 
 test('R4: editing during preview invalidates the pending snapshot and discards stale success', async (t) => {
