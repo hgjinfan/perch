@@ -112,6 +112,7 @@
             </p>
             <p id="backup-message" role="status"></p>
             <p id="backup-summary" hidden></p>
+            <ul id="backup-diff" class="config-diff" aria-label="与当前配置的差异" hidden></ul>
             <label class="backup-confirm"
               >我确认替换已保存配置并清除当前未保存的编辑<input
                 id="backup-confirm"
@@ -162,6 +163,7 @@
           >
           <button id="diagnostics-refresh" type="button">刷新记录</button>
         </div>
+        <div id="runtime-overview" class="runtime-overview" aria-label="运行概览"></div>
         <p id="diagnostics-message" role="status" class="field-help">展开后读取记录。</p>
         <div id="diagnostics-list"></div>
       </details>

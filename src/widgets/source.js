@@ -1,5 +1,5 @@
-import { mapWidget } from '../../shared/widget-types.js';
-export async function loadWidget(w, fetcher = fetch, env = process.env) {
+import { mapWidget, validPath } from '../../shared/widget-types.js';
+export async function readWidgetSource(w, fetcher = fetch, env = process.env) {
   let raw = w.source.data;
   if (w.source.kind === 'api') {
     const headers = {
@@ -36,5 +36,38 @@ export async function loadWidget(w, fetcher = fetch, env = process.env) {
       throw new Error('响应不是有效 JSON');
     }
   }
-  return mapWidget(w, raw);
+  return raw;
+}
+
+export async function loadWidget(w, fetcher = fetch, env = process.env) {
+  return mapWidget(w, await readWidgetSource(w, fetcher, env));
+}
+export async function inspectWidget(w, fetcher = fetch, env = process.env) {
+  const raw = await readWidgetSource(w, fetcher, env);
+  const fields = [];
+  let truncated = false;
+  function visit(value, path = '', depth = 0) {
+    if (fields.length >= 100 || depth > 6) {
+      truncated = true;
+      return;
+    }
+    if (!validPath(path)) return;
+    const type = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+    fields.push({ path, type });
+    if (Array.isArray(value)) {
+      if (value.length) visit(value[0], path ? `${path}.0` : '0', depth + 1);
+    } else if (value && typeof value === 'object') {
+      for (const key of Object.keys(value)) {
+        if (
+          key.includes('.') ||
+          !validPath(key) ||
+          /token|secret|password|authorization|cookie|api.?key|credential/i.test(key)
+        )
+          continue;
+        visit(value[key], path ? `${path}.${key}` : key, depth + 1);
+      }
+    }
+  }
+  visit(raw);
+  return { fields, truncated };
 }

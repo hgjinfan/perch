@@ -497,3 +497,54 @@
   font-size: 15px;
   font-weight: 500;
 }
+
+.config-diff {
+  padding: 0;
+  list-style: none;
+  max-height: 24rem;
+  overflow: auto;
+}
+.config-diff li {
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.config-diff strong,
+.config-diff span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.config-diff span {
+  margin-top: 0.3rem;
+  color: var(--sub);
+  font-size: 0.85rem;
+}
+.runtime-overview {
+  padding-block: 1rem;
+  border-block: 1px solid var(--line);
+  margin-block: 1rem;
+}
+.runtime-overview p,
+.field-inspector p {
+  color: var(--sub);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.field-inspector {
+  padding-block: 0.8rem;
+}
+.field-inspector summary {
+  cursor: pointer;
+}
+.field-paths {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-height: 18rem;
+  overflow: auto;
+  margin-top: 0.8rem;
+}
+.field-paths button {
+  overflow-wrap: anywhere;
+  text-align: left;
+  max-width: 100%;
+}

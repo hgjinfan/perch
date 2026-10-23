@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, writeFile, rename, unlink, chmod } from 'node:fs/promises';
+import { mkdir, open, readdir, writeFile, rename, unlink, chmod } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { validateConfig } from './schema.js';
@@ -44,12 +44,28 @@ export function createBackupRepository(directory, { keep = 10 } = {}) {
       throw error;
     }
   }
+  async function readSnapshot(id) {
+    const file = await open(join(directory, id), 'r');
+    try {
+      const bytes = Buffer.alloc(BACKUP_LIMIT + 1);
+      let size = 0;
+      while (size < bytes.length) {
+        const read = await file.read(bytes, size, bytes.length - size, null);
+        if (!read.bytesRead) break;
+        size += read.bytesRead;
+      }
+      if (size > BACKUP_LIMIT) throw new HttpError(413, '历史文件超过 1 MiB');
+      return JSON.parse(bytes.subarray(0, size).toString('utf8'));
+    } finally {
+      await file.close();
+    }
+  }
   return {
     async list() {
       const items = [];
       for (const id of await files()) {
         try {
-          const backup = JSON.parse(await readFile(join(directory, id), 'utf8'));
+          const backup = await readSnapshot(id);
           const config = parseBackup(backup);
           items.push({
             id,
@@ -66,7 +82,7 @@ export function createBackupRepository(directory, { keep = 10 } = {}) {
     async read(id) {
       if (!validId(id)) throw new HttpError(404, '备份不存在');
       try {
-        const backup = JSON.parse(await readFile(join(directory, id), 'utf8'));
+        const backup = await readSnapshot(id);
         parseBackup(backup);
         return backup;
       } catch (error) {

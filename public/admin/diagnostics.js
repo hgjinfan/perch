@@ -11,6 +11,40 @@ export function mountDiagnostics(root) {
     refreshButton = root.querySelector('#diagnostics-refresh'),
     search = root.querySelector('#diagnostics-search'),
     filter = root.querySelector('#diagnostics-filter');
+  async function runtime(current) {
+    const target = root.querySelector('#runtime-overview');
+    if (!target) return;
+    try {
+      const { budget, sources, cache } = await requestJson('/api/admin/runtime');
+      if (current !== epoch) return;
+      target.replaceChildren();
+      target.append(node('h3', '运行概览'));
+      const metrics = node('dl');
+      metrics.className = 'diagnostic-metrics';
+      for (const [label, value] of [
+        ['正在请求', `${budget.active} / ${budget.concurrency}`],
+        ['排队', `${budget.queued} / ${budget.maxQueue}`],
+        ['后台请求', budget.backgroundActive],
+        ['冷却来源', budget.cooling],
+        ['已完成', budget.completed],
+        ['请求失败', budget.failed],
+        ['预算拒绝', budget.rejected],
+        ['有效缓存来源', sources.fresh || 0],
+        ['RSS / 磁块 / 状态缓存命中', cache.hits],
+        ['RSS / 磁块 / 状态缓存加载', cache.loads],
+      ]) {
+        const pair = node('div');
+        pair.append(node('dt', label), node('dd', String(value)));
+        metrics.append(pair);
+      }
+      target.append(
+        metrics,
+        node('p', '当前进程累计；手动刷新记录时更新，不包含地址、凭据或访客位置。'),
+      );
+    } catch {
+      if (current === epoch) target.textContent = '运行概览暂时不可用，刷新记录可重试。';
+    }
+  }
   let report,
     epoch = 0,
     checking = false,
@@ -113,6 +147,8 @@ export function mountDiagnostics(root) {
       if (current !== epoch) return;
       report = result;
       draw();
+      await runtime(current);
+      if (current !== epoch) return;
       message.textContent = `记录更新于 ${time(report.generatedAt)}，共 ${report.sources.length} 个数据源。`;
     } catch (error) {
       if (current === epoch) message.textContent = `读取失败：${error.message}`;
@@ -132,6 +168,8 @@ export function mountDiagnostics(root) {
       if (current !== epoch) return;
       report = result;
       draw();
+      await runtime(current);
+      if (current !== epoch) return;
       message.textContent = `检查完成，记录更新于 ${time(report.generatedAt)}。`;
     } catch (error) {
       if (current === epoch) message.textContent = error.message;

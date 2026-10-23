@@ -1,3 +1,5 @@
+import { compareConfigs } from '../config/diff.js';
+import { inspectWidget } from '../widgets/source.js';
 import { createRequestLimiter } from '../request-budget.js';
 import { createBackup, parseBackup, summarizeConfig, BACKUP_LIMIT } from '../config/backups.js';
 import { HttpError, json, readJson, requireMethod, requireSameOriginJson } from '../http.js';
@@ -6,6 +8,7 @@ import { html } from '../render/html.js';
 import { renderPreview } from '../render/widgets.js';
 
 export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboard }) {
+  const limitPreview = createRequestLimiter({ limit: 20 });
   const limitDiagnostics = createRequestLimiter({ limit: 30 });
   function configVersionHeaders(response) {
     response.setHeader('ETag', store.version);
@@ -13,6 +16,17 @@ export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboar
   }
   return async (path, request, response) => {
     guard(request, response);
+    if (path === '/api/admin/runtime') {
+      requireMethod(request, 'GET');
+      return json(response, {
+        budget: fetcher.snapshot?.(),
+        cache: dashboard.cacheStats(),
+        sources: dashboard.diagnostics().sources.reduce((counts, source) => {
+          counts[source.cacheState] = (counts[source.cacheState] || 0) + 1;
+          return counts;
+        }, {}),
+      });
+    }
     if (path === '/api/admin/diagnostics') {
       requireMethod(request, 'GET');
       return json(response, dashboard.diagnostics());
@@ -48,7 +62,10 @@ export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboar
       const config = parseBackup(await readJson(request, BACKUP_LIMIT));
       if (path.endsWith('/preview')) {
         configVersionHeaders(response);
-        return json(response, summarizeConfig(config));
+        return json(response, {
+          ...summarizeConfig(config),
+          ...compareConfigs(store.get(), config),
+        });
       }
       await store.save(config, request.headers['if-match'], { recovery: true });
       configVersionHeaders(response);
@@ -65,9 +82,10 @@ export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboar
       configVersionHeaders(response);
       return json(response, saved);
     }
-    if (path === '/api/admin/widget-preview') {
+    if (path === '/api/admin/widget-preview' || path === '/api/admin/widget-inspect') {
       requireMethod(request, 'POST');
       requireSameOriginJson(request);
+      limitPreview('admin');
       const value = await readJson(request);
       let widget;
       try {
@@ -76,7 +94,21 @@ export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboar
         throw new HttpError(400, error.message);
       }
       try {
-        return html(response, renderPreview(widget, await loadWidget(widget, fetcher, env)));
+        const controller = new AbortController();
+        response.once('close', () => {
+          if (!response.writableEnded) controller.abort();
+        });
+        const upstream = fetcher.background || fetcher;
+        const background = (url, options = {}) =>
+          upstream(url, {
+            ...options,
+            signal: options.signal
+              ? AbortSignal.any([options.signal, controller.signal])
+              : controller.signal,
+          });
+        if (path.endsWith('widget-inspect'))
+          return json(response, await inspectWidget(widget, background, env));
+        return html(response, renderPreview(widget, await loadWidget(widget, background, env)));
       } catch (error) {
         const known =
           /^(映射字段|找不到文本|总量必须|列表路径|API 返回 HTTP|缺少密钥|响应不是|响应超过)/.test(

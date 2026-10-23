@@ -153,3 +153,13 @@ PWA 只缓存静态资源与通用 `/offline.html`。动态首页与 `/fragments
 `application.js` 创建唯一 `createBudgetedFetcher`，注入 dashboard、默认城市诊断与管理员未保存预览。所有上游 HTTP 请求共用并发 8、排队 24、等待 2 秒和默认 8 秒截止时间，原有调用方更短的超时仍生效。截止时间包含排队，正文读取完成才释放名额，正文限制 1 MiB。缓存命中不进入预算；不自动重试 POST。天气供应商局部预算继续作为额外限制，访客速率限制独立保留。
 
 按 origin 隔离 429/503 或连续失败的 30 秒冷却，失败记录最多 512 项；不记录完整 URL、headers 或正文。队满或等待到期拒绝，新请求不会绕过正在执行的任务。401/403 保留响应状态用于服务可达性判断。配置通过 UPSTREAM_CONCURRENCY、UPSTREAM_MAX_QUEUE、UPSTREAM_QUEUE_WAIT_MS、UPSTREAM_TIMEOUT_MS 设置，并限制合法范围。
+
+## 管理差异、运行概览与映射助手
+
+`config/diff.js` 在服务端对规范化配置生成有界差异，只输出路径、动作及非敏感基础值；source、headers、body、data、URL、mapping、fields 整体遮蔽。深度、遍历工作量与输出数量均有限制。备份预览返回差异并绑定当前配置版本，恢复继续使用 If-Match，不引入自动合并。磁盘备份读取同样限制 1 MiB，损坏或超限项不进入历史列表。
+
+`request-budget.js` 维护按 origin 并发与有界队列，前台任务优先，后台任务最多占 concurrency-1（最低 1）个名额。诊断和未保存预览共用 background fetcher。旧成功任务不能抹掉较新冷却；排队取消会移除任务，调用方取消不记为供应商失败。snapshot 仅返回计数，不返回 origin。管理员 `/api/admin/runtime` 读取该快照及 RSS/磁块/状态缓存统计，不请求上游。运行概览与诊断共用响应 epoch，旧响应不覆盖新检查状态。
+
+`widgets/source.js` 拆出 readWidgetSource 供映射和结构检查复用。POST `/api/admin/widget-inspect` 与预览共享管理员认证、同源校验、每分钟 20 次和全局预算，返回有界字段路径/类型，不返回原始响应值。字段名只接受 validPath 可表达的段，过滤常见敏感字段，数组仅遍历首项；结构检查不要求映射执行成功。关闭客户端请求会取消该次独立预览上游，不能取消公开缓存共享请求。
+
+`admin/field-inspector.js` 的临时选择控件用 data-editor-auxiliary 排除脏状态比较；真正填入路径通过原字段 input 事件更新模型、校验及编辑状态。多值指标沿用 JSON 字段更新路径，列表条目字段转换为相对路径。数值目标排除对象、数组等类型，字符串仍需正式预览判定数值有效性。

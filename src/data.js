@@ -49,6 +49,7 @@ export async function readRemote(url, fetcher = fetch) {
     },
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.body) throw new Error('Invalid feed');
   let size = 0;
   const chunks = [];
   for await (const chunk of response.body) {
@@ -119,6 +120,7 @@ export async function checkService(service, fetcher = fetch, onError = () => {})
     const response = await fetcher(url, {
       method: 'GET',
       redirect: 'follow',
+      headersOnly: true,
       signal: AbortSignal.timeout(5000),
     });
     await response.body?.cancel();

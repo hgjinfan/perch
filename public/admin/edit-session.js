@@ -6,7 +6,7 @@ export function createEditSession({ form, capture, onState, window: host = windo
     queued = false;
   function fingerprint() {
     const fields = [...form.querySelectorAll('input,textarea,select')]
-      .filter((c) => !c.closest('#preset-picker,#backup-settings'))
+      .filter((c) => !c.closest('#preset-picker,#backup-settings,[data-editor-auxiliary]'))
       .map((c) => [c.name || '', c.type, c.type === 'checkbox' ? c.checked : c.value]);
     return JSON.stringify({ config: capture(), fields });
   }

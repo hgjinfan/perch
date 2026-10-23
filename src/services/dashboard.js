@@ -27,6 +27,11 @@ export function createDashboardService(
     normalizeIp(request.socket.remoteAddress) ||
     'unresolved';
   const diagnostics = createDiagnostics({ now });
+  const cacheStats = { hits: 0, loads: 0 };
+  function countCache(event) {
+    if (event.type === 'hit') cacheStats.hits++;
+    if (event.type === 'start') cacheStats.loads++;
+  }
   let revision = store.revision,
     cached,
     diagnosticWeather;
@@ -44,6 +49,7 @@ export function createDashboardService(
       entry.read = createCache(now, {
         maxEntries: 1,
         onEvent(event) {
+          countCache(event);
           if (event.type === 'start') epoch = store.revision;
           if (resourceCaches.get(key) !== entry) return;
           if (event.type === 'hit' || epoch === store.revision) diagnostics.observe(event);
@@ -57,6 +63,7 @@ export function createDashboardService(
     const epoch = store.revision;
     cached = createCache(now, {
       onEvent: (event) => {
+        countCache(event);
         if (epoch !== store.revision) return;
         if (event.key === 'status') {
           if (event.expiresAt !== undefined)
@@ -72,7 +79,7 @@ export function createDashboardService(
     });
     // A separate admin-only forecast avoids observing visitor locations, IPs or city searches.
     diagnosticWeather = createWeatherService({
-      fetcher,
+      fetcher: fetcher.background || fetcher,
       env,
       now,
       onForecastEvent: (event) => {
@@ -142,7 +149,8 @@ export function createDashboardService(
     ];
   }
   const service = {
-    status() {
+    cacheStats: () => ({ ...cacheStats }),
+    status(requestFetcher = fetcher) {
       const config = current();
       requireVisible(config, 'status');
       const epoch = store.revision;
@@ -153,7 +161,7 @@ export function createDashboardService(
             if (epoch === store.revision && (s.url || s.healthUrl))
               diagnostics.observe({ key, type: 'start' });
             let failure;
-            const result = await checkService(s, fetcher, (error) => (failure = error));
+            const result = await checkService(s, requestFetcher, (error) => (failure = error));
             if (epoch === store.revision && result.state !== 'unconfigured')
               diagnostics.observe({
                 key,
@@ -166,23 +174,23 @@ export function createDashboardService(
         ),
       );
     },
-    feed(id) {
+    feed(id, requestFetcher = fetcher) {
       const config = current();
       requireVisible(config, `feed-${id}`);
       const feed = config.feeds.find((f) => f.id === id);
       if (!feed) throw new HttpError(404, 'Not found');
       if (!feed.url) return { state: 'unconfigured' };
       return resource(`feed:${id}`, [feed.url, feed.limit], 300000, async () =>
-        parseFeed(await readRemote(feed.url, fetcher), feed.limit),
+        parseFeed(await readRemote(feed.url, requestFetcher), feed.limit),
       );
     },
-    widget(id) {
+    widget(id, requestFetcher = fetcher) {
       const config = current();
       const widget = config.widgets.find((w) => w.id === id);
       if (!widget || config.layout.hidden.includes(`widget-${id}`))
         throw new HttpError(404, 'Not found');
       return resource(`widget:${id}`, widgetInputs(widget), widget.refresh * 1000, () =>
-        loadWidget(widget, fetcher, env),
+        loadWidget(widget, requestFetcher, env),
       );
     },
     weather(request) {
@@ -221,9 +229,11 @@ export function createDashboardService(
       const task = Promise.resolve()
         .then(async () => {
           if (store.get() !== config) throw new HttpError(409, '配置已变化，请刷新诊断列表');
-          if (source.kind === 'service') await service.status();
-          else if (source.kind === 'feed') await service.feed(id.slice(5));
-          else if (source.kind === 'widget') await service.widget(id.slice(7));
+          if (source.kind === 'service') await service.status(fetcher.background || fetcher);
+          else if (source.kind === 'feed')
+            await service.feed(id.slice(5), fetcher.background || fetcher);
+          else if (source.kind === 'widget')
+            await service.widget(id.slice(7), fetcher.background || fetcher);
           else
             await diagnosticWeather.get(
               { ...config.weather, mode: 'fixed' },

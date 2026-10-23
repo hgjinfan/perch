@@ -9,7 +9,7 @@ import { validateConfig } from '../src/config/schema.js';
 import { validateWidget } from '../src/widgets.js';
 test('edit session detects raw invalid drafts and model actions, ignores backup/preset inputs, and guards only dirty navigation', () => {
   const { document } = parseHTML(
-    '<form><input name="title" value="original"><textarea>{}</textarea><div id="preset-picker"><input></div><div id="backup-settings"><input></div></form>',
+    '<form><input name="title" value="original"><textarea>{}</textarea><div id="preset-picker"><input></div><div id="backup-settings"><input></div><div data-editor-auxiliary><input></div></form>',
   );
   const form = document.querySelector('form'),
     model = { order: ['a', 'b'] },
@@ -25,6 +25,7 @@ test('edit session detects raw invalid drafts and model actions, ignores backup/
   assert.equal(session.dirty, false);
   form.querySelector('#preset-picker input').value = 'transient';
   form.querySelector('#backup-settings input').value = 'temporary';
+  form.querySelector('[data-editor-auxiliary] input').value = 'helper selection';
   assert.equal(session.dirty, false);
   form.querySelector('textarea').value = '{';
   assert.equal(session.dirty, true);

@@ -7,11 +7,16 @@ export function readConfigVersion(response) {
   if (/^"[a-f0-9]{64}"$/.test(legacy || '')) return legacy;
   throw new Error('无法读取配置版本，请检查反向代理是否保留 X-Config-Version 响应头');
 }
-export async function requestJson(path, { method = 'GET', body, headers = {}, onResponse } = {}) {
+export async function requestJson(
+  path,
+  { method = 'GET', body, headers = {}, onResponse, signal } = {},
+) {
   const response = await fetch(path, {
     method,
     cache: 'no-store',
-    signal: AbortSignal.timeout(15000),
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(15000)])
+      : AbortSignal.timeout(15000),
     headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });

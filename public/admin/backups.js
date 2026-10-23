@@ -1,6 +1,46 @@
 import { notifyConfigChange } from '../core/config-events.js';
 import { requestJson, readConfigVersion } from '../core/api.js';
 import { node } from '../core/dom.js';
+const displayPath = (path) =>
+  path
+    .split('.')
+    .map((part) => {
+      const names = {
+        title: '标题',
+        services: '服务',
+        feeds: '订阅',
+        widgets: '磁块',
+        layout: '布局',
+        groups: '分组',
+        items: '磁贴',
+        hidden: '隐藏项',
+        source: '数据来源',
+        url: '地址',
+        healthUrl: '检测地址',
+        name: '名称',
+        refresh: '刷新间隔',
+        mapping: '字段映射',
+        fields: '指标映射',
+        weather: '天气',
+        bookmarks: '书签',
+        projects: '项目',
+        timezone: '时区',
+        columns: '列数',
+        span: '宽度',
+        mode: '位置模式',
+        latitude: '纬度',
+        longitude: '经度',
+        limit: '条数',
+        description: '说明',
+        icon: '图标',
+        type: '类型',
+        unit: '单位',
+        titles: '磁块标题',
+        density: '密度',
+      };
+      return part.replace(/^([A-Za-z]+)(.*)$/, (_, key, suffix) => (names[key] || key) + suffix);
+    })
+    .join(' / ');
 const MAX_BYTES = 1024 * 1024;
 export function mountBackups(root, { onRestored = () => {} } = {}) {
   const file = root.querySelector('#backup-file'),
@@ -23,6 +63,11 @@ export function mountBackups(root, { onRestored = () => {} } = {}) {
     confirm.disabled = true;
     restore.disabled = true;
     summary.hidden = true;
+    const diff = root.querySelector('#backup-diff');
+    if (diff) {
+      diff.hidden = true;
+      diff.replaceChildren();
+    }
   }
   function say(message, error = false) {
     status.textContent = message;
@@ -47,6 +92,22 @@ export function mountBackups(root, { onRestored = () => {} } = {}) {
       version = nextVersion;
       summary.textContent = `首页「${info.title}」 · ${info.groups} 个分组 · ${info.services} 个服务 · ${info.feeds} 个订阅 · ${info.widgets} 个自定义磁块 · ${info.bookmarks} 个书签 · ${info.projects} 个项目`;
       summary.hidden = false;
+      const diff = root.querySelector('#backup-diff');
+      diff.replaceChildren();
+      if (!info.changes.length) diff.append(node('p', '与当前已保存配置相同。'));
+      else {
+        const labels = { added: '新增', removed: '删除', changed: '修改' };
+        for (const change of info.changes) {
+          const row = node('li');
+          row.append(
+            node('strong', `${labels[change.action]} · ${displayPath(change.path)}`),
+            node('span', `${change.before} → ${change.after}`),
+          );
+          diff.append(row);
+        }
+      }
+      if (info.truncated) diff.append(node('li', '变更较多，仅显示前 100 项。'));
+      diff.hidden = false;
       confirm.disabled = false;
       say('检查通过。确认后会替换已保存配置，并重新加载管理页；当前未保存的编辑也会被清除。');
     } catch (error) {

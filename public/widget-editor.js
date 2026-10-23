@@ -1,3 +1,4 @@
+import { mountFieldInspector } from './admin/field-inspector.js';
 import { duplicateWidget } from './admin/widget-copy.js';
 import { parseJsonField } from './admin/json-fields.js';
 import { validPath } from '../shared/widget-types.js';
@@ -100,8 +101,9 @@ export function setupWidgets(config, onModulesChanged) {
         url: '条目链接字段',
         detail: '条目说明字段',
       };
-      for (const key of Object.keys(mappings[w.type]))
-        input(
+      const mappingTargets = [];
+      for (const key of Object.keys(mappings[w.type])) {
+        const control = input(
           labels[key],
           w.mapping[key] ?? mappings[w.type][key],
           (value) => (w.mapping[key] = value),
@@ -116,8 +118,10 @@ export function setupWidgets(config, onModulesChanged) {
                   : '',
           },
         );
-      if (widgetDefinitions[w.type].controls.fields)
-        input(
+        mappingTargets.push({ key, label: labels[key], control });
+      }
+      if (widgetDefinitions[w.type].controls.fields) {
+        const fieldsControl = input(
           '指标映射',
           JSON.stringify(w.fields, null, 2),
           (value, control) => {
@@ -132,6 +136,20 @@ export function setupWidgets(config, onModulesChanged) {
             hint: '每项包含 label（名称）、path（字段路径）、unit（单位），可选 scale（数值倍率），最多 8 项。',
           },
         );
+        w.fields.forEach((field, index) =>
+          mappingTargets.push({
+            key: `metric-${index}`,
+            label: field.label,
+            control: fieldsControl,
+            set(path) {
+              const fields = JSON.parse(fieldsControl.value);
+              fields[index].path = path;
+              fieldsControl.value = JSON.stringify(fields, null, 2);
+            },
+          }),
+        );
+      }
+      if (mappingTargets.length) mountFieldInspector(controls, w, mappingTargets);
       if (w.type === 'metric')
         input('数值倍率', w.scale ?? 1, (value) => (w.scale = Number(value)), {
           type: 'number',
