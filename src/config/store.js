@@ -12,10 +12,12 @@ export async function createConfigStore({
   backups = createBackupRepository(join(dirname(statePath), 'backups')),
 }) {
   let raw;
+  let initialized = true;
   try {
     raw = await readFile(statePath, 'utf8');
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
+    initialized = false;
     raw = await readFile(configPath, 'utf8');
   }
   let config = validateConfig(JSON.parse(raw));
@@ -29,6 +31,29 @@ export async function createConfigStore({
     },
     get revision() {
       return revision;
+    },
+    get initialized() {
+      return initialized;
+    },
+    async initialize(value) {
+      if (initialized) throw new HttpError(409, '首页已经完成初始化');
+      if (saving) throw new HttpError(409, '正在保存，请稍后重试');
+      saving = true;
+      try {
+        let next;
+        try {
+          next = validateConfig(value);
+        } catch (error) {
+          throw new HttpError(400, error.message);
+        }
+        await persist(statePath, next);
+        config = next;
+        initialized = true;
+        revision += 1;
+        return next;
+      } finally {
+        saving = false;
+      }
     },
     async save(value, expectedVersion, { recovery = false } = {}) {
       if (saving) throw new HttpError(409, '正在保存，请稍后重试');

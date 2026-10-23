@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>首次设置 · Perch</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/setup.css" />
+    <script src="/setup.js" type="module"></script>
+  </head>
+  <body>
+    <main class="setup-shell">
+      <p class="brand">perch<span>/ setup</span></p>
+      <h1>设置你的首页</h1>
+      <p class="muted">完成这几项设置后，就可以打开 Perch 首页。</p>
+      <form id="setup-form">
+        <label>首页名称<input name="title" maxlength="60" value="栖页" required /></label>
+        <label>日期时区<input name="timezone" value="Asia/Shanghai" required /></label>
+        <label class="check"
+          ><input name="weather-enabled" type="checkbox" checked /> 启用天气</label
+        >
+        <div id="weather-fields">
+          <label>默认城市<input name="city" maxlength="80" value="上海" /></label>
+          <label>纬度<input name="latitude" type="number" step="any" value="31.2304" /></label>
+          <label>经度<input name="longitude" type="number" step="any" value="121.4737" /></label>
+          <label>城市时区<input name="weather-timezone" value="Asia/Shanghai" /></label>
+        </div>
+        <p class="field-help">
+          管理员密码不会写入首页配置。需要管理功能时，请在服务器环境变量中设置
+          <code>ADMIN_PASSWORD</code> 后重启。
+        </p>
+        <p id="message" role="status"></p>
+        <button type="submit">完成设置</button>
+      </form>
+    </main>
+  </body>
+</html>

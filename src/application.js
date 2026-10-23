@@ -7,6 +7,7 @@ import { createAdminRoutes } from './routes/admin.js';
 import { createPublicRoutes } from './routes/public.js';
 import { HttpError, json, securityHeaders } from './http.js';
 import { html, empty } from './render/html.js';
+import { readJson, requireMethod } from './http.js';
 
 export async function createApplication({
   root,
@@ -31,6 +32,30 @@ export async function createApplication({
     securityHeaders(response);
     try {
       const path = new URL(request.url, 'http://localhost').pathname;
+      if (path === '/api/setup') {
+        requireMethod(request, 'GET', 'POST');
+        if (request.socket.remoteAddress !== '127.0.0.1' && request.socket.remoteAddress !== '::1')
+          throw new HttpError(403, '首次初始化仅允许本机访问');
+        if (store.initialized) throw new HttpError(409, '首页已经完成初始化');
+        if (request.method === 'GET')
+          return json(response, { initialized: false, config: store.get() });
+        const body = await readJson(request, 1024 * 32);
+        const current = store.get();
+        const next = {
+          ...current,
+          title: body.title ?? current.title,
+          timezone: body.timezone ?? current.timezone,
+          weather: body.weather === null ? null : { ...current.weather, ...body.weather },
+        };
+        await store.initialize(next);
+        return json(response, { initialized: true });
+      }
+      if (path === '/setup' && !store.initialized) {
+        requireMethod(request, 'GET', 'HEAD');
+        if (request.socket.remoteAddress !== '127.0.0.1' && request.socket.remoteAddress !== '::1')
+          throw new HttpError(403, '首次初始化仅允许本机访问');
+        return assets.send('/setup.html', request, response);
+      }
       await (assets.isAdmin(path) ? admin : publicRoutes)(path, request, response);
     } catch (error) {
       if (!(error instanceof HttpError)) logger.error('Request failed:', error.message);

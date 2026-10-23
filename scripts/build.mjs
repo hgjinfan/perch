@@ -99,10 +99,15 @@ for (const name of [
   'offline.html',
   'launch.html',
   'manifest.webmanifest',
+  'setup.html',
+  'setup.css',
+  'setup.js',
 ])
   await copyFile(resolve(root, 'public', name), resolve(out, name));
 for (const path of [
   'favicon.svg',
+  'setup.css',
+  'setup.js',
   ...(await readdir(resolve(root, 'public/icons')))
     .filter((f) => f.endsWith('.png'))
     .map((f) => 'icons/' + f),
@@ -123,6 +128,9 @@ for (const [url, disk, admin] of [
   ['/offline.html', 'offline.html', false],
   ['/launch.html', 'launch.html', false],
   ['/manifest.webmanifest', 'manifest.webmanifest', false],
+  ['/setup.html', 'setup.html', false],
+  ['/setup.css', 'setup.css', false],
+  ['/setup.js', 'setup.js', false],
   ['/sw.js', 'sw.js', false],
 ])
   files.push({ url, disk, admin, precache: !['/index.html', '/sw.js'].includes(url) });

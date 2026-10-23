@@ -1,0 +1,35 @@
+.setup-shell {
+  max-width: 560px;
+  margin: 8vh auto;
+  padding: 28px;
+  background: var(--tile);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.setup-shell h1 {
+  margin: 8px 0;
+}
+.setup-shell form {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+.setup-shell label {
+  display: grid;
+  gap: 6px;
+}
+.setup-shell input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.setup-shell .check {
+  display: flex;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+.setup-shell .check input {
+  width: auto;
+}
+.setup-shell button {
+  justify-self: start;
+}

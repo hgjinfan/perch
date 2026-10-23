@@ -1,6 +1,7 @@
 import { renderGroups } from './groups.js';
 import { text, icon } from './html.js';
 import { renderServiceGrid } from './services.js';
+import packageJson from '../../package.json' with { type: 'json' };
 
 export function renderHome(config, shell, version, pageVersion) {
   const pageTitle =
@@ -27,6 +28,7 @@ export function renderHome(config, shell, version, pageVersion) {
       '<time id="date"></time>',
       () => `<time id="date" data-timezone="${text(config.timezone)}">${text(date)}</time>`,
     )
+    .replace('__PERCH_VERSION__', () => text(packageJson.version))
     .replace(
       /<main id="board"[^>]*>[\s\S]*?<\/main>/,
       () => `<main id="board" class="board" aria-label="个人仪表盘">${services}${modules}</main>`,

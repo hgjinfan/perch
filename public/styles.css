@@ -426,13 +426,22 @@ nav {
   color: var(--sub);
 }
 footer {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   gap: 10px;
   color: var(--sub);
   font-size: 10px;
   padding-top: 17px;
   flex-wrap: wrap;
+}
+footer #updated {
+  justify-self: start;
+}
+footer .project-link {
+  justify-self: center;
+}
+footer > a:last-child {
+  justify-self: end;
 }
 footer a {
   text-decoration: none;
