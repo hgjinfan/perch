@@ -1,4 +1,4 @@
-export async function buildServiceWorker(files, { version, urlFor }) {
+export async function buildServiceWorker(files, { version, urlFor, basePath = '' }) {
   const shell = [...files]
     .filter(([path, file]) => !file.admin && !['/sw.js', '/', '/index.html'].includes(path))
     .map(([path]) => urlFor(path));
@@ -15,5 +15,6 @@ export async function buildServiceWorker(files, { version, urlFor }) {
     .replace(/\[\s*['"]__SHELL_FILES__['"]\s*\]/, JSON.stringify(shell))
     .replace(/\[\s*['"]__PRECACHE_FILES__['"]\s*\]/, JSON.stringify(precache))
     .replace('__OFFLINE_URL__', urlFor('/offline.html'))
-    .replace('__LAUNCH_URL__', urlFor('/launch.html'));
+    .replace('__LAUNCH_URL__', urlFor('/launch.html'))
+    .replace('__BASE_PATH__', JSON.stringify(basePath));
 }

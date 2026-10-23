@@ -1,6 +1,7 @@
 import { notifyConfigChange } from '../core/config-events.js';
 import { requestJson, readConfigVersion } from '../core/api.js';
 import { node } from '../core/dom.js';
+import { appPath } from '../core/base-path.js';
 const displayPath = (path) =>
   path
     .split('.')
@@ -183,7 +184,7 @@ export function mountBackups(root, { onRestored = () => {} } = {}) {
         select.onclick = () =>
           preview(() => requestJson(`/api/admin/backups/${encodeURIComponent(item.id)}`));
         const download = node('a', '下载');
-        download.href = `/api/admin/backups/${encodeURIComponent(item.id)}`;
+        download.href = appPath(`/api/admin/backups/${encodeURIComponent(item.id)}`);
         download.download = `perch-recovery-${item.id}`;
         row.append(select, download);
         history.append(row);

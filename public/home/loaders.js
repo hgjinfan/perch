@@ -1,3 +1,4 @@
+import { appPath } from '../core/base-path.js';
 import { parseFragment, applyFragment } from './fragment-content.js';
 import { bindWeatherHours, restoreWeatherHour } from './weather-hours.js';
 import { requestHtml } from '../core/api.js';
@@ -43,7 +44,7 @@ export function createLoaders({ modules, serviceTiles }) {
         if (error.reload) {
           window.dispatchEvent(new Event('homepage:update-required'));
           module.loading.fail('页面已有新版本', '请点击更新页面。', () =>
-            location.assign('/page/latest'),
+            location.assign(appPath('/page/latest')),
           );
           return;
         }

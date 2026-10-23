@@ -6,7 +6,7 @@ import { renderServiceResult } from '../render/services.js';
 import { moduleVisible } from '../config/visibility.js';
 import { describeModules, renderModuleResult, renderCities } from '../render/modules.js';
 
-export function createPublicRoutes({ store, dashboard, assets, shell }) {
+export function createPublicRoutes({ store, dashboard, assets, shell, basePath = '' }) {
   const pageVersion = createPageVersion(store, assets.version);
   return async (path, request, response) => {
     requireMethod(request, 'GET', 'HEAD');
@@ -36,14 +36,17 @@ export function createPublicRoutes({ store, dashboard, assets, shell }) {
     if (path === '/healthz') return json(response, { ok: true });
     const documentPath = `/page/${assets.version}/${revision}`;
     if (path.startsWith('/page/') && path !== documentPath) {
-      response.writeHead(302, { Location: documentPath, 'Cache-Control': 'no-store' });
+      response.writeHead(302, {
+        Location: `${basePath}${documentPath}`,
+        'Cache-Control': 'no-store',
+      });
       response.end();
       return;
     }
     if (path === '/' || path === '/index.html' || path === documentPath)
       return html(
         response,
-        renderHome(store.get(), shell, assets.version, version),
+        renderHome(store.get(), shell, assets.version, version, basePath),
         200,
         request.method,
         {

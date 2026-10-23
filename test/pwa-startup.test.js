@@ -86,3 +86,23 @@ test('failed script activation restores the launch shell and previous document m
   assert.equal(host.title, 'Launch');
   assert.equal(host.documentElement.dataset.pageVersion, undefined);
 });
+
+test('subpath startup fetches the requested page and accepts mounted client assets', async (t) => {
+  const host = fixture(t);
+  host.documentElement.dataset.basePath = '/sub/perch';
+  const mountedMarkup = markup
+    .replace('<html ', '<html data-base-path="/sub/perch" ')
+    .replace('/client/public/styles-ABC.css', '/sub/perch/client/public/styles-ABC.css')
+    .replace('/client/public/app-ABC.js', '/sub/perch/client/public/app-ABC.js');
+  await launchHomepage({
+    host,
+    pathname: '/sub/perch/page/latest',
+    fetcher: async (path) => {
+      assert.equal(path, '/sub/perch/page/latest');
+      return new Response(mountedMarkup, { headers: { 'Content-Type': 'text/html' } });
+    },
+    prepare: async () => {},
+    load: async (url) => assert.equal(url, '/sub/perch/client/public/app-ABC.js'),
+  });
+  assert.equal(host.querySelector('#board').textContent, 'Live content');
+});

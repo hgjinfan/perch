@@ -1,3 +1,5 @@
+import { appPath } from '../core/base-path.js';
+
 export function setupPwa({ reconnect }) {
   const install = document.querySelector('#install-app');
   const notice = document.querySelector('#notice');
@@ -5,7 +7,7 @@ export function setupPwa({ reconnect }) {
   window.addEventListener('homepage:update-required', () => {
     update.hidden = false;
     update.textContent = '更新页面';
-    update.onclick = () => location.assign('/page/latest');
+    update.onclick = () => location.assign(appPath('/page/latest'));
   });
   let deferredPrompt;
   const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
@@ -53,7 +55,11 @@ export function setupPwa({ reconnect }) {
     wasControlled = true;
   });
   navigator.serviceWorker
-    .register('/sw.js', { type: 'module', updateViaCache: 'none' })
+    .register(appPath('/sw.js'), {
+      type: 'module',
+      scope: appPath('/'),
+      updateViaCache: 'none',
+    })
     .then((registration) => {
       function available() {
         if (!registration.waiting || !navigator.serviceWorker.controller) return;

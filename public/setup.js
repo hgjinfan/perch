@@ -1,3 +1,4 @@
+const appPath = (path) => `${document.documentElement.dataset.basePath || ''}${path}`;
 const form = document.querySelector('#setup-form');
 const weather = document.querySelector('[name="weather-enabled"]');
 const fields = document.querySelector('#weather-fields');
@@ -23,7 +24,7 @@ form.onsubmit = async (event) => {
       : null,
   };
   try {
-    const response = await fetch('/api/setup', {
+    const response = await fetch(appPath('/api/setup'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -31,7 +32,7 @@ form.onsubmit = async (event) => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || '保存失败');
     message.textContent = '设置完成，正在打开首页…';
-    location.href = '/';
+    location.href = appPath('/');
   } catch (error) {
     message.textContent = error.message;
   }

@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { HttpError } from './http.js';
 import { buildServiceWorker } from './pwa.js';
 import { versionModule, versionHtml, canonicalAsset } from './asset-version.js';
+import { mountedPath } from './base-path.js';
 
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -16,8 +17,8 @@ const contentTypes = {
   '.webmanifest': 'application/manifest+json',
 };
 const privateFiles = new Set(['admin.html', 'admin.js', 'admin.css', 'widget-editor.js']);
-export async function createAssets(root, { mode = 'source', directory } = {}) {
-  if (mode === 'built') return createBuiltAssets(root, { directory });
+export async function createAssets(root, { mode = 'source', directory, basePath = '' } = {}) {
+  if (mode === 'built') return createBuiltAssets(root, { directory, basePath });
   const files = new Map();
   async function collect(directory, prefix, admin = false) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -44,21 +45,24 @@ export async function createAssets(root, { mode = 'source', directory } = {}) {
   for (const [path, file] of [...files].sort(([a], [b]) => a.localeCompare(b)))
     hash.update(path).update(file.body);
   const version = hash.digest('hex').slice(0, 20),
-    urlFor = (path) => `/assets/${version}${path}`;
+    urlFor = (path) => mountedPath(basePath, `/assets/${version}${path}`);
   for (const [path, file] of files) {
     const type = extname(path);
     let source = file.body.toString('utf8');
     if (type === '.js') source = await versionModule(source, path, urlFor, (p) => files.has(p));
     else if (type === '.html')
-      source = versionHtml(theme.render(source), urlFor, (p) => files.has(p));
+      source = versionHtml(theme.render(source), urlFor, (p) => files.has(p), basePath);
     else if (type === '.webmanifest') {
       const manifest = JSON.parse(source);
+      manifest.id = mountedPath(basePath, '/');
+      manifest.start_url = mountedPath(basePath, '/launch.html');
+      manifest.scope = mountedPath(basePath, '/');
       for (const icon of manifest.icons || []) if (files.has(icon.src)) icon.src = urlFor(icon.src);
       source = JSON.stringify(manifest);
     } else continue;
     file.body = Buffer.from(source);
   }
-  const worker = await buildServiceWorker(files, { version, urlFor });
+  const worker = await buildServiceWorker(files, { version, urlFor, basePath });
   files.get('/sw.js').body = Buffer.from(worker);
   for (const file of files.values())
     file.etag = '"' + createHash('sha256').update(file.body).digest('hex') + '"';
@@ -86,6 +90,7 @@ export async function createAssets(root, { mode = 'source', directory } = {}) {
             ? 'public, max-age=31536000, immutable'
             : 'no-cache',
       };
+      if (path === '/sw.js') headers['Service-Worker-Allowed'] = mountedPath(basePath, '/');
       if (!file.admin) {
         headers.ETag = file.etag;
         const incoming = request.headers?.['if-none-match'];

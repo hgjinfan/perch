@@ -137,3 +137,28 @@ test('production service worker precaches only eager public assets and offline s
   assert.ok(precache.includes('/offline.html'));
   assert.ok(!shell.some((s) => s.startsWith('/client/admin/')));
 });
+
+test('production client URLs and PWA scope honor a configured base path', async (t) => {
+  const config = validateConfig(JSON.parse(await readFile(resolve(root, 'config.json'), 'utf8')));
+  const server = await createApplication({
+    root,
+    store: { get: () => config, revision: 0 },
+    assetsMode: 'built',
+    assetsDirectory: directory,
+    env: { ADMIN_PASSWORD: 'test-build', BASE_PATH: '/sub/perch' },
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  t.after(() => new Promise((r) => server.close(r)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const page = await (await fetch(`${base}/sub/perch/`)).text();
+  assert.match(page, /data-base-path="\/sub\/perch"/);
+  assert.ok(page.includes(`/sub/perch${manifest.aliases['/app.js']}`));
+  assert.ok(page.includes('data-fragment="/sub/perch/fragments/'));
+  const manifestResponse = await fetch(`${base}/sub/perch/manifest.webmanifest`);
+  const appManifest = await manifestResponse.json();
+  assert.equal(appManifest.scope, '/sub/perch/');
+  assert.equal(appManifest.start_url, '/sub/perch/launch.html');
+  const worker = await fetch(`${base}/sub/perch/sw.js`);
+  assert.equal(worker.headers.get('service-worker-allowed'), '/sub/perch/');
+  assert.ok((await worker.text()).includes('"/sub/perch"'));
+});

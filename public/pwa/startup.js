@@ -1,4 +1,5 @@
 import { hydrateInitialContent } from './initial-content.js';
+import { appPath } from '../core/base-path.js';
 // The cached launch shell never contains site config, fetched content or visitor location.
 export async function launchHomepage({
   fetcher = fetch,
@@ -8,8 +9,10 @@ export async function launchHomepage({
   hydrate = hydrateInitialContent,
   pathname = location.pathname,
 } = {}) {
-  const path = /^\/page\/(?:latest|[a-f0-9]{20}\/[a-f0-9]{32})$/.test(pathname) ? pathname : '/';
-  const response = await fetcher(path, {
+  const basePath = host.documentElement.dataset.basePath || '';
+  const route = pathname.startsWith(`${basePath}/page/`) ? pathname.slice(basePath.length) : '/';
+  const path = /^\/page\/(?:latest|[a-f0-9]{20}\/[a-f0-9]{32})$/.test(route) ? route : '/';
+  const response = await fetcher(appPath(path, host), {
     cache: 'no-store',
     credentials: 'omit',
     signal: AbortSignal.timeout(12000),
@@ -23,7 +26,9 @@ export async function launchHomepage({
   if (
     !board ||
     !/^[a-f0-9]{20}-[a-f0-9]{32}$/.test(parsed.documentElement.dataset.pageVersion || '') ||
-    !/^\/(?:client\/public\/app-[A-Z0-9]+\.js|assets\/[a-f0-9]{20}\/app\.js)$/.test(src || '')
+    !/^\/(?:client\/public\/app-[A-Z0-9]+\.js|assets\/[a-f0-9]{20}\/app\.js)$/.test(
+      src?.slice(basePath.length) || '',
+    )
   )
     throw new Error('Invalid homepage');
   const theme = host.documentElement.dataset.theme;
@@ -52,10 +57,9 @@ async function prepareResources(parsed, host, src) {
   // Wait for the actual release stylesheet before replacing the visible startup shell.
   for (const link of parsed.querySelectorAll('link[rel="stylesheet"]')) {
     const href = link.getAttribute('href');
+    const path = href?.slice(host.documentElement.dataset.basePath?.length || 0) || '';
     if (
-      !/^\/(?:client\/public\/styles-[A-Z0-9]+\.css|assets\/[a-f0-9]{20}\/styles\.css)$/.test(
-        href || '',
-      )
+      !/^\/(?:client\/public\/styles-[A-Z0-9]+\.css|assets\/[a-f0-9]{20}\/styles\.css)$/.test(path)
     )
       throw new Error('Invalid stylesheet');
     if (

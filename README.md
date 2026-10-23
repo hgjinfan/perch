@@ -67,7 +67,7 @@ npm run check
 npm test
 ```
 
-环境变量：`HOST`（默认 `127.0.0.1`）、`PORT`（默认 `3210`）、`CONFIG_PATH`（可选其他配置文件路径）。`/healthz` 提供进程健康检查。
+环境变量：`HOST`（默认 `127.0.0.1`）、`PORT`（默认 `3210`）、`CONFIG_PATH`（可选其他配置文件路径）、`BASE_PATH`（可选部署子路径，例如 `/perch`，不带末尾斜线）。`/healthz` 提供进程健康检查；启用子路径后地址为 `/perch/healthz`。
 
 ## 管理员与访客
 
@@ -137,6 +137,8 @@ API 请求超时 8 秒、响应最多 1 MiB，不跟随重定向，避免认证�
 ### 反向代理设置
 
 默认 `TRUST_PROXY_HOPS=0`，使用连接来源 IP，忽略所有转发头。VPS 在单层 Nginx/Caddy 之后部署时设置 `TRUST_PROXY_HOPS=1`，并保证应用端口只接受该反向代理的连接。服务从 `X-Forwarded-For` 的右侧按固定层数取地址，避免相信可伪造的最左侧内容；本地、内网、无效地址不会用于公网定位。
+
+需要将站点挂载在子路径（例如 `https://example.com/perch/`）时，将 `BASE_PATH=/perch` 配置给应用并重启。应用会为页面、管理 API、静态资源、PWA manifest 和 Service Worker 生成带前缀的路径；代理可以保留 `/perch` 转发，也可以在转发时剥掉 `/perch`。子路径只支持由路径段组成的绝对路径，不带末尾斜线，例如 `/apps/perch`。若有代理负责剥除前缀，仍需将 `/perch/sw.js` 映射到应用的 `/sw.js`，并让页面和该脚本经过同一个应用实例。
 
 Nginx 单层代理示例（替换现有 location 内的对应设置）：
 

@@ -17,10 +17,18 @@ export async function versionModule(source, path, urlFor, known) {
   return source;
 }
 
-export function versionHtml(source, urlFor, known) {
-  return source.replace(/\b(src|href)=(['"])(\/[^'"\s]*)\2/g, (match, attribute, quote, path) =>
-    known(path) && path !== '/' ? `${attribute}=${quote}${urlFor(path)}${quote}` : match,
-  );
+export function versionHtml(source, urlFor, known, basePath = '') {
+  source = source.replace(/<html\b([^>]*)>/, (tag, attributes) => {
+    const base = basePath.replace(
+      /[&"<>]/g,
+      (char) => ({ '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' })[char],
+    );
+    return `<html${attributes}${basePath ? ` data-base-path="${base}"` : ''}>`;
+  });
+  return source.replace(/\b(src|href)=(['"])(\/[^'"\s]*)\2/g, (match, attribute, quote, path) => {
+    const value = known(path) && path !== '/' ? urlFor(path) : `${basePath}${path}`;
+    return `${attribute}=${quote}${value}${quote}`;
+  });
 }
 
 export function canonicalAsset(path, version) {

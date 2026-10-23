@@ -5,7 +5,11 @@ import { createHash } from 'node:crypto';
 import { HttpError } from './http.js';
 import { versionHtml } from './asset-version.js';
 import { buildServiceWorker } from './pwa.js';
-export async function createBuiltAssets(root, { directory = resolve(root, 'dist/client') } = {}) {
+import { mountedPath } from './base-path.js';
+export async function createBuiltAssets(
+  root,
+  { directory = resolve(root, 'dist/client'), basePath = '' } = {},
+) {
   const manifest = JSON.parse(await readFile(resolve(directory, 'manifest.json'), 'utf8'));
   if (!/^[a-f0-9]{20}$/.test(manifest.version)) throw Error('Invalid client build manifest');
   const files = new Map(),
@@ -20,9 +24,10 @@ export async function createBuiltAssets(root, { directory = resolve(root, 'dist/
     if (!disk.startsWith(resolve(directory) + sep)) throw Error('Invalid build asset path');
     files.set(entry.url, { ...entry, disk, body: await readFile(disk) });
   }
-  const urlFor = (path) => aliases[path] || path,
-    known = (path) => files.has(urlFor(path));
-  const theme = createThemeBootstrap(files.get(urlFor('/pwa/theme.js')).body.toString());
+  const rawUrlFor = (path) => aliases[path] || path,
+    urlFor = (path) => mountedPath(basePath, rawUrlFor(path)),
+    known = (path) => files.has(rawUrlFor(path));
+  const theme = createThemeBootstrap(files.get(rawUrlFor('/pwa/theme.js')).body.toString());
   for (const path of [
     '/index.html',
     '/admin.html',
@@ -32,18 +37,21 @@ export async function createBuiltAssets(root, { directory = resolve(root, 'dist/
   ]) {
     const file = files.get(path);
     const source = theme.render(file.body.toString());
-    file.body = Buffer.from(versionHtml(source, urlFor, known));
+    file.body = Buffer.from(versionHtml(source, urlFor, known, basePath));
   }
   const appManifest = files.get('/manifest.webmanifest');
   const parsed = JSON.parse(appManifest.body.toString());
+  parsed.id = mountedPath(basePath, '/');
+  parsed.start_url = mountedPath(basePath, '/launch.html');
+  parsed.scope = mountedPath(basePath, '/');
   for (const icon of parsed.icons || []) icon.src = urlFor(icon.src);
   appManifest.body = Buffer.from(JSON.stringify(parsed));
   files.get('/sw.js').body = Buffer.from(
-    await buildServiceWorker(files, { version: manifest.version, urlFor }),
+    await buildServiceWorker(files, { version: manifest.version, urlFor, basePath }),
   );
   for (const file of files.values())
     file.etag = '"' + createHash('sha256').update(file.body).digest('hex') + '"';
-  const assetFor = (path) => files.get(urlFor(path));
+  const assetFor = (path) => files.get(rawUrlFor(path));
   const types = {
     '.js': 'text/javascript; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
@@ -70,6 +78,7 @@ export async function createBuiltAssets(root, { directory = resolve(root, 'dist/
             ? 'public, max-age=31536000, immutable'
             : 'no-cache',
       };
+      if (path === '/sw.js') headers['Service-Worker-Allowed'] = mountedPath(basePath, '/');
       if (!file.admin) {
         headers.ETag = file.etag;
         if (

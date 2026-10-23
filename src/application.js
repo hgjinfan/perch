@@ -9,6 +9,7 @@ import { HttpError, json, securityHeaders } from './http.js';
 import { html, empty } from './render/html.js';
 import { readJson, requireMethod, requireSameOriginJson } from './http.js';
 import { normalizeIp } from './client-ip.js';
+import { normalizeBasePath, stripBasePath } from './base-path.js';
 
 function requireLocalSetup(request) {
   let hostname;
@@ -34,7 +35,12 @@ export async function createApplication({
   assetsMode = 'source',
   assetsDirectory,
 }) {
-  const assets = await createAssets(root, { mode: assetsMode, directory: assetsDirectory });
+  const basePath = normalizeBasePath(env.BASE_PATH || '');
+  const assets = await createAssets(root, {
+    mode: assetsMode,
+    directory: assetsDirectory,
+    basePath,
+  });
   const guard = createAdminGuard({
     username: env.ADMIN_USERNAME || 'admin',
     password: env.ADMIN_PASSWORD,
@@ -43,11 +49,18 @@ export async function createApplication({
   fetcher = createBudgetedFetcher(fetcher, { env });
   const dashboard = createDashboardService(store, { fetcher, env });
   const admin = createAdminRoutes({ store, assets, guard, fetcher, env, dashboard });
-  const publicRoutes = createPublicRoutes({ store, dashboard, assets, shell: assets.homeShell });
+  const publicRoutes = createPublicRoutes({
+    store,
+    dashboard,
+    assets,
+    shell: assets.homeShell,
+    basePath,
+  });
   return createServer(async (request, response) => {
     securityHeaders(response, { scriptHashes: assets.scriptHashes });
+    let path = '/';
     try {
-      const path = new URL(request.url, 'http://localhost').pathname;
+      path = stripBasePath(new URL(request.url, 'http://localhost').pathname, basePath);
       if (path === '/api/setup') {
         requireMethod(request, 'GET', 'POST');
         requireLocalSetup(request);
@@ -78,7 +91,7 @@ export async function createApplication({
       if (!(error instanceof HttpError)) logger.error('Request failed:', error.message);
       if (error.reload) response.setHeader('X-Homepage-Reload', '1');
       if (error.retryAfter) response.setHeader('Retry-After', String(error.retryAfter));
-      if (request.url?.startsWith('/fragments/'))
+      if (path.startsWith('/fragments/'))
         return html(
           response,
           empty(error.status === 404 ? '内容不可用' : '暂时无法更新', '请稍后重试。', true),

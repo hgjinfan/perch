@@ -1,3 +1,5 @@
+import { appPath } from './base-path.js';
+
 // Compression proxies may weaken or replace the HTTP entity ETag. Prefer the
 // application-level config version; accept legacy weak ETags only as opaque tokens.
 export function readConfigVersion(response) {
@@ -11,7 +13,7 @@ export async function requestJson(
   path,
   { method = 'GET', body, headers = {}, onResponse, signal } = {},
 ) {
-  const response = await fetch(path, {
+  const response = await fetch(appPath(path), {
     method,
     cache: 'no-store',
     signal: signal
@@ -31,7 +33,7 @@ export async function requestJson(
 }
 
 export async function requestHtml(path, { method = 'GET', body, signal } = {}) {
-  const response = await fetch(path, {
+  const response = await fetch(appPath(path), {
     method,
     signal: signal
       ? AbortSignal.any([signal, AbortSignal.timeout(15000)])

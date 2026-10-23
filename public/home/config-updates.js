@@ -1,3 +1,4 @@
+import { appPath } from '../core/base-path.js';
 import { pageDocumentUrl } from './page-sync.js';
 import { CONFIG_CHANNEL } from '../core/config-events.js';
 export function createConfigWatcher({
@@ -20,7 +21,7 @@ export function createConfigWatcher({
     flight = Promise.resolve()
       .then(async () => {
         try {
-          const response = await fetcher('/page-version', {
+          const response = await fetcher(appPath('/page-version'), {
             method: 'HEAD',
             cache: 'no-store',
             credentials: 'omit',
@@ -81,7 +82,8 @@ export function setupConfigUpdates({ onConfig } = {}) {
   });
   const button = document.querySelector('#refresh-config');
   if (button)
-    button.onclick = () => location.assign(latest ? pageDocumentUrl(latest) : '/page/latest');
+    button.onclick = () =>
+      location.assign(latest ? pageDocumentUrl(latest) : appPath('/page/latest'));
   try {
     if (globalThis.BroadcastChannel) {
       const channel = new BroadcastChannel(CONFIG_CHANNEL);

@@ -1,6 +1,8 @@
+import { appPath } from '../core/base-path.js';
+
 export function pageDocumentUrl(version) {
   if (!/^[a-f0-9]{20}-[a-f0-9]{32}$/.test(version || '')) throw new Error('Invalid page version');
-  return `/page/${version.slice(0, 20)}/${version.slice(21)}`;
+  return appPath(`/page/${version.slice(0, 20)}/${version.slice(21)}`);
 }
 export async function synchronizePage(version, { fetcher = fetch, mount, host = document } = {}) {
   const response = await fetcher(pageDocumentUrl(version), {

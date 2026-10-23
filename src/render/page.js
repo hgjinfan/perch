@@ -3,7 +3,7 @@ import { text, icon } from './html.js';
 import { renderServiceGrid } from './services.js';
 import packageJson from '../../package.json' with { type: 'json' };
 
-export function renderHome(config, shell, version, pageVersion) {
+export function renderHome(config, shell, version, pageVersion, basePath = '') {
   const pageTitle =
     config.title.trim().toLowerCase() === 'perch' ? '栖页 · Perch' : `${config.title} · Perch`;
   const services = renderServiceGrid(config);
@@ -16,13 +16,14 @@ export function renderHome(config, shell, version, pageVersion) {
   }).format(new Date());
   const markup = shell
     .replace(
-      '<html lang="zh-CN">',
-      `<html lang="zh-CN" data-density="${text(config.layout.density)}"${pageVersion ? ` data-page-version="${text(pageVersion)}"` : ''}${version ? ` data-asset-version="${version}"` : ''}>`,
+      /<html lang="zh-CN"([^>]*)>/,
+      (_, attributes) =>
+        `<html lang="zh-CN"${attributes} data-density="${text(config.layout.density)}"${pageVersion ? ` data-page-version="${text(pageVersion)}"` : ''}${version ? ` data-asset-version="${version}"` : ''}>`,
     )
     .replace(/<title>[\s\S]*?<\/title>/, () => `<title>${text(pageTitle)}</title>`)
     .replace(
-      /<a class="brand" href="\/">[\s\S]*?<\/a\s*>/,
-      () => `<a class="brand" href="/">${text(config.title)}<span>/ home</span></a>`,
+      /<a class="brand" href="[^"]*">[\s\S]*?<\/a\s*>/,
+      () => `<a class="brand" href="${basePath}/">${text(config.title)}<span>/ home</span></a>`,
     )
     .replace(
       '<time id="date"></time>',
@@ -36,10 +37,13 @@ export function renderHome(config, shell, version, pageVersion) {
   const rendered = markup.replace(/<i data-lucide="([a-z0-9-]+)">\s*<\/i>/g, (_, name) =>
     icon(name),
   );
-  return version
-    ? rendered.replaceAll(
-        'data-fragment="/fragments/',
-        `data-fragment="/fragments/${version}/${pageVersion?.slice(21) || ''}/`,
-      )
+  const mounted = basePath
+    ? rendered.replaceAll('data-fragment="/fragments/', `data-fragment="${basePath}/fragments/`)
     : rendered;
+  return version
+    ? mounted.replaceAll(
+        `data-fragment="${basePath}/fragments/`,
+        `data-fragment="${basePath}/fragments/${version}/${pageVersion?.slice(21) || ''}/`,
+      )
+    : mounted;
 }

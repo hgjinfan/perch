@@ -5,6 +5,7 @@ services:
     ports:
       - '127.0.0.1:3210:3210'
     environment:
+      BASE_PATH: ${BASE_PATH:-}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       WEATHER_RATE_LIMIT: ${WEATHER_RATE_LIMIT:-60}

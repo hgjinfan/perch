@@ -7,6 +7,8 @@ const PRECACHE = ['__PRECACHE_FILES__'];
 const CACHE = `perch-shell-${VERSION}`;
 const OFFLINE = '__OFFLINE_URL__';
 const LAUNCH = '__LAUNCH_URL__';
+const BASE_PATH = __BASE_PATH__;
+const ROOT = `${BASE_PATH}/`;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -38,12 +40,15 @@ self.addEventListener('message', (event) => {
 });
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  const pagePath = url.pathname.startsWith(`${BASE_PATH}/page/`)
+    ? url.pathname.slice(BASE_PATH.length)
+    : '';
   if (
     event.request.mode === 'navigate' &&
     url.origin === self.location.origin &&
     !url.searchParams.has('direct') &&
-    (['/', '/index.html', '/launch.html'].includes(url.pathname) ||
-      /^\/page\/(?:latest|[a-f0-9]{20}\/[a-f0-9]{32})$/.test(url.pathname))
+    ([ROOT, `${BASE_PATH}/index.html`, `${BASE_PATH}/launch.html`].includes(url.pathname) ||
+      /^\/page\/(?:latest|[a-f0-9]{20}\/[a-f0-9]{32})$/.test(pagePath))
   ) {
     event.respondWith(
       (async () => {
