@@ -221,18 +221,22 @@ Compose 的 `.env` 设置 `TRUST_PROXY_HOPS=1` 后重新创建容器。若有 CD
 
 ## 常用数据源预设
 
-管理页“自定义磁块 → 从常用数据源添加”提供 6 个预设。填写服务地址、仓库或监控标识后添加为新磁块，自动生成 GET 接口、认证头引用、展示模板、字段映射、单位和刷新间隔。添加本身不请求数据、不保存，也不覆盖已有磁块；继续使用“测试数据并预览”确认实际接口结果，最后保存。生成后是普通自定义磁块，可以编辑、分组、排序、备份和恢复，不依赖运行时插件。
+管理页“自定义磁块 → 从常用数据源添加”提供多个按类别整理的预设。填写服务地址、实体、查询或监控标识后添加为新磁块，自动生成 GET 接口、认证头引用、展示模板、字段映射、单位和刷新间隔。添加本身不请求数据、不保存，也不覆盖已有磁块；继续使用“测试数据并预览”确认实际接口结果，最后保存。生成后是普通自定义磁块，可以编辑、分组、排序、备份和恢复，不依赖运行时插件。
 
-| 预设        | 展示内容                            | 填写内容与边界                                                                                   | 接口依据                                                                        |
-| ----------- | ----------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| GitHub      | Stars、Forks、未关闭 Issues/PR 合计 | 所有者与仓库名；公开仓库可免认证，私有数据使用 Token                                             | [官方仓库 API](https://docs.github.com/en/rest/repos/repos#get-a-repository)    |
-| Gitea       | Stars、Forks、未关闭 Issues         | 站点地址、所有者、仓库名；私有仓库需读取权限 Token                                               | [官方仓库 API](https://docs.gitea.com/api/operations/repo-get/)                 |
-| Immich      | 照片数、视频数、占用 GiB            | 站点地址；管理员 API Key 需 server.statistics 权限                                               | [官方统计 API](https://api.immich.app/endpoints/server/getServerStatistics)     |
-| Uptime Kuma | 指定监控的 24 小时可用率            | 已发布状态页 slug、监控 ID；使用公开 JSON 接口，版本升级可能改变内部接口                         | [项目 API 说明](https://github.com/louislam/uptime-kuma/wiki/API-Documentation) |
-| Nezha 新版  | 服务器名称、ID 清单                 | `/api/v1/server` 返回 `success/data` 的面板，Bearer Token；PAT 需 inventory:read。非实时资源监控 | [新版接口说明](https://nezha.wiki/en_US/guide/api)                              |
-| Nezha 旧版  | 指定服务器 CPU%、已用内存/磁盘 GiB  | `/api/v1/server/details?id=...` 返回 `result` 与 `status.CPU` 的旧面板，原始 Authorization Token | [旧版接口说明](https://nezha-v0.mereith.dev/guide/api)                          |
+| 预设           | 展示内容                            | 填写内容与边界                                                                                   | 接口依据                                                                        |
+| -------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| GitHub         | Stars、Forks、未关闭 Issues/PR 合计 | 所有者与仓库名；公开仓库可免认证，私有数据使用 Token                                             | [官方仓库 API](https://docs.github.com/en/rest/repos/repos#get-a-repository)    |
+| Gitea          | Stars、Forks、未关闭 Issues         | 站点地址、所有者、仓库名；私有仓库需读取权限 Token                                               | [官方仓库 API](https://docs.gitea.com/api/operations/repo-get/)                 |
+| Immich         | 照片数、视频数、占用 GiB            | 站点地址；管理员 API Key 需 server.statistics 权限                                               | [官方统计 API](https://api.immich.app/endpoints/server/getServerStatistics)     |
+| Uptime Kuma    | 指定监控的 24 小时可用率            | 已发布状态页 slug、监控 ID；使用公开 JSON 接口，版本升级可能改变内部接口                         | [项目 API 说明](https://github.com/louislam/uptime-kuma/wiki/API-Documentation) |
+| Nezha 新版     | 服务器名称、ID 清单                 | `/api/v1/server` 返回 `success/data` 的面板，Bearer Token；PAT 需 inventory:read。非实时资源监控 | [新版接口说明](https://nezha.wiki/en_US/guide/api)                              |
+| Nezha 旧版     | 指定服务器 CPU%、已用内存/磁盘 GiB  | `/api/v1/server/details?id=...` 返回 `result` 与 `status.CPU` 的旧面板，原始 Authorization Token | [旧版接口说明](https://nezha-v0.mereith.dev/guide/api)                          |
+| Home Assistant | 一个数值型实体及单位                | 站点地址、实体 ID、单位；长期访问 Token 使用服务器环境变量，避免选择私人实体                     | [REST API](https://developers.home-assistant.io/docs/api/rest/)                 |
+| Proxmox VE     | 指定节点 CPU%、内存和根分区已用 GiB | 节点名称、API 用户与 Token ID；Token Secret 放在环境变量，并授予只读 Sys.Audit                   | [API Viewer](https://pve.proxmox.com/pve-docs/api-viewer/)                      |
+| Prometheus     | PromQL 查询的第一条数值序列         | 查询结果应返回至少一条序列；支持可选 Bearer Token，不支持表达式或脚本执行                        | [HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/)          |
+| Jellyfin       | Jellyfin 服务器版本                 | 站点地址；使用公开系统信息接口，不读取媒体库或用户数据                                           | [API 文档](https://api.jellyfin.org/)                                           |
 
-站点地址填写站点根路径（可以带反向代理前缀），不要重复附加 `/api`。版本不同不自动猜测接口，若预览失败请按实际服务文档调整生成的普通磁块。没有为 Docker daemon、Vaultwarden 管理端等假造通用统计 API。
+站点地址填写服务根路径（可以带反向代理前缀），不要重复附加预设中已经包含的 API 路径。版本不同不自动猜测接口，若预览失败请按实际服务文档调整生成的普通磁块。标准 REST/JSON 读接口可以通过通用 API 磁块连接；依赖 Cookie 登录、多步会话或 WebSocket 的服务（例如 qBittorrent）不能直接套用本预设流程，需要单独实现并审查认证与会话管理。没有为 Docker daemon、Vaultwarden 管理端等假造通用统计 API。
 
 预设认证仅要求**环境变量名**，默认如 `WIDGET_IMMICH_TOKEN`；实际密钥在服务器 `.env` 设置，Docker Compose 还需在 environment 中显式传入。GitHub/Gitea 可以选择免认证或环境变量 Token。公开内容仍由服务端生成，接口地址、请求头、字段映射及密钥不发送给访客；选择展示的数据本身是公开内容。
 

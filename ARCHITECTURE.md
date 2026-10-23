@@ -120,7 +120,7 @@ PWA 只缓存静态资源与通用 `/launch.html`、`/offline.html`。动态首�
 
 ## 数据源预设
 
-`public/admin/preset-definitions.js` 是带官方接口出处的配方注册表，`preset-picker.js` 生成最少的填写项，再创建普通 widget；两者位于管理专用目录，需要认证且不进入 PWA 缓存。新增配方不应在公共加载器或服务端添加按服务名称分支，除非确实需要新的数据源协议。
+`public/admin/preset-definitions.js` 是带官方接口出处的配方目录；`preset-picker.js` 按类别生成填写项，再创建普通 widget。所有预设都复用普通 JSON GET、字段映射、环境变量密钥和服务端预览，不为服务名称增加公共渲染或请求分支。依赖 Cookie 会话、WebSocket 或非 JSON 协议的服务需要单独评估专用连接器，不能用通用 REST 配方伪装支持。
 
 预设生成阶段只校验填写项，实际测试/保存继续使用 `validateWidget`、`loadWidget` 与正式服务端渲染器。认证只生成 WIDGET_ 环境变量引用。`shared/widget-types.js` 统一处理数值倍率，`widgets/schema.js` 校验并保留它；不存在任意表达式执行。旧配置默认倍率 1，预设生成后不自动联动改写已保存磁块。
 

@@ -5,7 +5,12 @@ const repoFields = (stars, issues = 'Issues / PR') => [
   { label: 'Forks', path: 'forks_count', unit: '' },
   { label: issues, path: 'open_issues_count', unit: '' },
 ];
-const field = (key, label, placeholder = '') => ({ key, label, placeholder });
+const field = (key, label, placeholder = '', options = {}) => ({
+  key,
+  label,
+  placeholder,
+  ...options,
+});
 export const sourcePresets = {
   github: {
     label: 'GitHub · 仓库统计',
@@ -125,6 +130,103 @@ export const sourcePresets = {
     },
   },
 };
+export const additionalSourcePresets = {
+  'home-assistant-sensor': {
+    category: '家庭自动化',
+    label: 'Home Assistant · 传感器',
+    icon: 'house',
+    type: 'metric',
+    refresh: 60,
+    docs: 'https://developers.home-assistant.io/docs/api/rest/',
+    note: '读取一个数值型实体的当前状态。长期访问令牌只通过服务器环境变量提供；请只选择适合公开展示的实体。',
+    fields: [
+      field('base', '站点地址', 'https://home.example.com'),
+      field('entity', '实体 ID', 'sensor.temperature'),
+      field('unit', '单位（可选）', '°C', { required: false }),
+    ],
+    env: 'WIDGET_HOME_ASSISTANT_TOKEN',
+    build: (v) => {
+      if (!/^[a-z0-9_]+\.[a-z0-9_]+$/i.test(v.entity || ''))
+        throw new Error('实体 ID 格式应为 domain.object_id');
+      return {
+        url: endpoint(v.base, `/api/states/${segment(v.entity)}`),
+        mapping: { value: 'state' },
+        unit: v.unit || '',
+      };
+    },
+  },
+  'proxmox-node': {
+    category: '服务器与虚拟化',
+    label: 'Proxmox VE · 节点资源',
+    icon: 'server',
+    type: 'metrics',
+    refresh: 60,
+    docs: 'https://pve.proxmox.com/pve-docs/api-viewer/',
+    note: '读取单个节点的 CPU、内存和根分区已用量。创建只读 API Token，并在权限中授予该节点的 Sys.Audit；Token Secret 放在 WIDGET_ 环境变量中。',
+    fields: [
+      field('base', '站点地址', 'https://pve.example.com:8006'),
+      field('user', 'API 用户', 'monitoring@pve'),
+      field('tokenId', 'Token ID', 'perch'),
+      field('node', '节点名称', 'pve1'),
+    ],
+    env: 'WIDGET_PROXMOX_TOKEN',
+    authHeader: 'Authorization',
+    authPrefix: (v) => `PVEAPIToken=${v.user}!${v.tokenId}=`,
+    build: (v) => {
+      if (!/^[\w.-]+@[\w.-]+$/.test(v.user || '') || !/^[\w.-]+$/.test(v.tokenId || ''))
+        throw new Error('请检查 API 用户和 Token ID 格式');
+      return {
+        url: endpoint(v.base, `/api2/json/nodes/${segment(v.node)}/status`),
+        fields: [
+          { label: 'CPU', path: 'data.cpu', unit: '%', scale: 100 },
+          { label: '内存已用', path: 'data.memory.used', unit: 'GiB', scale: GiB },
+          { label: '根分区已用', path: 'data.rootfs.used', unit: 'GiB', scale: GiB },
+        ],
+      };
+    },
+  },
+  prometheus: {
+    category: '监控与指标',
+    label: 'Prometheus · PromQL 指标',
+    icon: 'activity',
+    type: 'metric',
+    refresh: 60,
+    docs: 'https://prometheus.io/docs/prometheus/latest/querying/api/',
+    note: '执行即时 PromQL 查询并读取第一条结果。建议使用返回单个序列的表达式，如 sum(up)；单位按查询结果设置。不要查询不适合公开展示的指标。',
+    fields: [
+      field('base', '站点地址', 'https://prometheus.example.com'),
+      field('query', 'PromQL 查询', 'sum(up)'),
+      field('unit', '单位（可选）', '', { required: false }),
+    ],
+    optionalAuth: true,
+    env: 'WIDGET_PROMETHEUS_TOKEN',
+    build: (v) => {
+      if (!v.query || v.query.length > 500) throw new Error('PromQL 查询不能为空且最多 500 字符');
+      const url = new URL(endpoint(v.base, '/api/v1/query'));
+      url.searchParams.set('query', v.query);
+      return {
+        url: url.toString(),
+        mapping: { value: 'data.result.0.value.1' },
+        unit: v.unit || '',
+      };
+    },
+  },
+  'jellyfin-version': {
+    category: '媒体服务',
+    label: 'Jellyfin · 服务器版本',
+    icon: 'clapperboard',
+    type: 'text',
+    refresh: 3600,
+    docs: 'https://api.jellyfin.org/',
+    note: '读取 Jellyfin 公开系统信息中的版本号，不需要 API Key。此预设只展示版本，不读取媒体库或用户数据。',
+    fields: [field('base', '站点地址', 'https://media.example.com')],
+    build: (v) => ({
+      url: endpoint(v.base, '/System/Info/Public'),
+      mapping: { text: 'Version' },
+    }),
+  },
+};
+export const catalogPresets = { ...sourcePresets, ...additionalSourcePresets };
 function segment(value) {
   if (
     typeof value !== 'string' ||
@@ -144,7 +246,7 @@ function endpoint(base, path) {
   return safe.replace(/\/+$/, '') + path;
 }
 export function buildPreset(key, values, id) {
-  const preset = Object.hasOwn(sourcePresets, key) ? sourcePresets[key] : null;
+  const preset = Object.hasOwn(catalogPresets, key) ? catalogPresets[key] : null;
   if (!preset) throw new Error('请选择数据源预设');
   const v = Object.fromEntries(
     Object.entries(values).map(([key, value]) => [
@@ -152,14 +254,18 @@ export function buildPreset(key, values, id) {
       typeof value === 'string' ? value.trim() : '',
     ]),
   );
-  for (const f of preset.fields) if (!v[f.key]) throw new Error(`请填写${f.label}`);
+  for (const f of preset.fields)
+    if (f.required !== false && !v[f.key]) throw new Error(`请填写${f.label}`);
   const built = preset.build(v),
     headers = { ...built.headers };
   if (preset.env && (!preset.optionalAuth || v.auth === 'env')) {
     if (!/^WIDGET_[A-Z0-9_]+$/.test(v.env || ''))
       throw new Error('密钥变量名须以 WIDGET_ 开头，仅包含大写字母、数字和下划线');
-    headers[preset.authHeader || 'Authorization'] =
-      (preset.authPrefix ?? 'Bearer ') + '${' + v.env + '}';
+    const prefix =
+      typeof preset.authPrefix === 'function'
+        ? preset.authPrefix(v)
+        : (preset.authPrefix ?? 'Bearer ');
+    headers[preset.authHeader || 'Authorization'] = prefix + '${' + v.env + '}';
   }
   return {
     id,

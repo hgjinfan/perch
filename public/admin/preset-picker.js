@@ -1,5 +1,5 @@
 import { node } from '../core/dom.js';
-import { sourcePresets, buildPreset } from './preset-definitions.js';
+import { catalogPresets, buildPreset } from './preset-definitions.js';
 import { createFieldEditor } from './fields.js';
 export function mountPresetPicker(target, add) {
   target.replaceChildren();
@@ -8,13 +8,21 @@ export function mountPresetPicker(target, add) {
   picker.append(node('summary', '从常用数据源添加'));
   const label = node('label', '服务'),
     select = node('select');
-  for (const [key, preset] of [
-    ['', { label: '选择一个数据源…' }],
-    ...Object.entries(sourcePresets),
-  ]) {
+  const placeholder = node('option', '选择一个数据源…');
+  placeholder.value = '';
+  select.append(placeholder);
+  const categories = new Map();
+  for (const [key, preset] of Object.entries(catalogPresets)) {
+    const category = preset.category || '项目与服务';
+    if (!categories.has(category)) {
+      const group = node('optgroup');
+      group.label = category;
+      categories.set(category, group);
+      select.append(group);
+    }
     const option = node('option', preset.label);
     option.value = key;
-    select.append(option);
+    categories.get(category).append(option);
   }
   label.append(select);
   picker.append(label);
@@ -27,7 +35,7 @@ export function mountPresetPicker(target, add) {
   select.onchange = () => {
     controls.replaceChildren();
     status.textContent = '';
-    const preset = sourcePresets[select.value];
+    const preset = catalogPresets[select.value];
     if (!preset) return;
     const values = {
       title: preset.label,
@@ -45,8 +53,13 @@ export function mountPresetPicker(target, add) {
     const input = createFieldEditor(controls);
     input('磁块标题', values.title, (v) => (values.title = v));
     for (const f of preset.fields) {
-      const control = input(f.label, '', (v) => (values[f.key] = v));
+      const control = input(f.label, f.default || '', (v) => (values[f.key] = v), {
+        required: f.required !== false,
+        type: f.type || 'text',
+        maxLength: f.maxLength,
+      });
       control.placeholder = f.placeholder;
+      if (f.default) values[f.key] = f.default;
     }
     let envLabel;
     if (preset.optionalAuth)
