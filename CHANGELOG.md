@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## v0.1.5 — 2026-10-23
+
+- 支持 BASE_PATH 反向代理子路径部署，统一资源、接口及 PWA 路径；无尾斜杠首页重定向到应用作用域。
+- 新增 Home Assistant、Proxmox VE、Prometheus 与 Jellyfin 数据源预设。
+- 展示运行状态与数据更新时间，加入本地 HTTP 集成测试及可选公共演示联调。
 
 - 修复 PWA 离屏预加载未填入服务更新时间的问题；新鲜度文案改为中性“更新于”，不再将检测结果误标为服务正常。
 
