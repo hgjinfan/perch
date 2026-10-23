@@ -36,11 +36,11 @@ export function renderServiceGrid(config) {
         : `<div class="tile app unconfigured"${attributes}>${body}</div>`;
     })
     .join('');
-  return `<div class="service-region" role="group" aria-label="服务入口与状态"${enabled ? ' data-module="status" data-fragment="/fragments/status" data-refresh="60000"' : ''}><div class="service-grid module-content" data-load-state="ready" aria-busy="false">${tiles}</div>${enabled ? '<span class="module-update visually-hidden" role="status" hidden>正在更新服务状态</span><div data-load-feedback></div>' : ''}</div>`;
+  return `<div class="service-region" role="group" aria-label="服务入口与状态"${enabled ? ' data-module="status" data-fragment="/fragments/status" data-refresh="60000"' : ''}><div class="service-grid module-content" data-load-state="ready" aria-busy="false">${tiles}</div>${enabled ? '<span class="module-update visually-hidden" role="status" hidden>正在更新服务状态</span><time id="service-freshness" class="service-freshness" data-freshness hidden></time><div data-load-feedback></div>' : ''}</div>`;
 }
 
 export function renderServiceResult(config, result) {
   if (!Array.isArray(result.data)) throw new Error('No service status data');
   const items = new Map(result.data.map((item) => [item.id, item]));
-  return `<div data-fragment-result data-state="${result.state === 'stale' ? 'stale' : 'ready'}">${config.services.map((service) => renderServiceState(service, items.get(service.id))).join('')}</div>`;
+  return `<div data-fragment-result data-state="${result.state === 'stale' ? 'stale' : 'ready'}"${result.updatedAt ? ` data-updated-at="${text(result.updatedAt)}"` : ''}>${config.services.map((service) => renderServiceState(service, items.get(service.id))).join('')}</div>`;
 }

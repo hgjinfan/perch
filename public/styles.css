@@ -338,6 +338,19 @@ nav {
 .state-label.stale {
   color: var(--amber);
 }
+.freshness {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+.service-freshness {
+  justify-self: end;
+  color: var(--sub);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.service-freshness.stale {
+  color: var(--amber);
+}
 .weather-main {
   display: flex;
   align-items: center;

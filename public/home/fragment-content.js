@@ -1,3 +1,5 @@
+import { updateFreshness } from './freshness.js';
+
 // Both startup hydration and later refreshes apply the same server-rendered fragment contract.
 export function parseFragment(markup, host = document) {
   const template = host.createElement('template');
@@ -8,6 +10,15 @@ export function parseFragment(markup, host = document) {
 }
 export function applyFragment(module, fragment, serviceTiles) {
   const id = module.node.dataset.module;
+  if (fragment.dataset.updatedAt) {
+    const time = id === 'status' ? document.querySelector('#service-freshness') : null;
+    if (time) {
+      time.dateTime = fragment.dataset.updatedAt;
+      time.classList.toggle('stale', fragment.dataset.state === 'stale');
+      time.hidden = false;
+      updateFreshness(time.parentNode);
+    }
+  }
   if (id !== 'status') module.content.replaceChildren(...fragment.childNodes);
   if (fragment.dataset.title)
     module.node.querySelector('[data-module-title]').textContent = fragment.dataset.title;

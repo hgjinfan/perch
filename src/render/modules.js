@@ -122,9 +122,11 @@ export function renderModuleResult(module, result, config) {
   }
   if (result.state === 'stale')
     body += `<div class="state-label stale">${text(result.message || '更新失败，保留上次内容')}</div>`;
-  if (module.kind === 'widget' && result.updatedAt)
-    body += `<div class="state-label">更新于 ${text(new Date(result.updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))}</div>`;
-  return `<div data-fragment-result data-state="${result.state === 'stale' ? 'stale' : 'ready'}"${title ? ` data-title="${text(title)}"` : ''}>${body || ''}</div>`;
+  if (result.updatedAt) {
+    const date = text(result.updatedAt);
+    body += `<time class="state-label freshness${result.state === 'stale' ? ' stale' : ''}" data-freshness datetime="${date}" aria-label="数据更新时间">${result.state === 'stale' ? '上次成功' : '更新于'} ${text(new Date(result.updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))}</time>`;
+  }
+  return `<div data-fragment-result data-state="${result.state === 'stale' ? 'stale' : 'ready'}"${result.updatedAt ? ` data-updated-at="${text(result.updatedAt)}"` : ''}${title ? ` data-title="${text(title)}"` : ''}>${body || ''}</div>`;
 }
 export function renderCities(cities) {
   return cities.length

@@ -7,6 +7,7 @@ import { applyPreferences, toggleTheme } from './core/preferences.js';
 import { createScheduler } from './core/scheduler.js';
 import { mountModules } from './home/board.js';
 import { createLoaders } from './home/loaders.js';
+import { updateFreshness } from './home/freshness.js';
 
 let scheduler,
   loaders,
@@ -30,6 +31,7 @@ function mountBoard() {
   }
   busy = false;
   updateDate();
+  updateFreshness();
   refresh(true);
   rememberLayout();
 }
@@ -72,5 +74,6 @@ setupPwa({
 });
 mountBoard();
 setInterval(resume, 5000);
+setInterval(updateFreshness, 30000);
 document.addEventListener('visibilitychange', () => resume(true));
 window.addEventListener('focus', () => resume(true));

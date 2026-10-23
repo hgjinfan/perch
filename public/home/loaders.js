@@ -2,6 +2,7 @@ import { parseFragment, applyFragment } from './fragment-content.js';
 import { bindWeatherHours, restoreWeatherHour } from './weather-hours.js';
 import { requestHtml } from '../core/api.js';
 import { bindWeatherPicker, weatherFragmentUrl } from './weather.js';
+import { updateFreshness } from './freshness.js';
 
 export function createLoaders({ modules, serviceTiles }) {
   const loaders = new Map();
@@ -73,6 +74,14 @@ export function createLoaders({ modules, serviceTiles }) {
               slot.querySelector('.service-detail').textContent = tile.title;
             }
           }
+        const freshness =
+          id === 'status'
+            ? document.querySelector('#service-freshness')
+            : module.content.querySelector('[data-freshness]');
+        if (freshness && !freshness.hidden) {
+          freshness.classList.add('stale');
+          updateFreshness(freshness.parentNode);
+        }
         module.loading.fail(
           '暂时无法更新',
           '请稍后重试。',
