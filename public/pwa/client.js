@@ -5,7 +5,7 @@ export function setupPwa({ reconnect }) {
   window.addEventListener('homepage:update-required', () => {
     update.hidden = false;
     update.textContent = '更新页面';
-    update.onclick = () => location.reload();
+    update.onclick = () => location.assign('/page/latest');
   });
   let deferredPrompt;
   const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;

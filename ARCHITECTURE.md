@@ -136,7 +136,7 @@ PWA 只缓存静态资源与通用 `/offline.html`。动态首页与 `/fragments
 
 `src/config/page-version.js` 在单服务实例中为配置快照维护随机公共标记，同内容的新对象保留原标记；它与资源发布版本组合后注入首页 data-page-version。管理员使用的配置内容 ETag 保持独立，不暴露给公开检测接口。
 
-公开路由 `/page-version` 仅支持 GET/HEAD，返回无正文的 204，If-None-Match 命中返回 304，两者均 no-store。`public/home/config-updates.js` 独立处理 30 秒检查、前后台及联网条件、5 秒超时、请求合并和一次性提示，失败不干扰内容加载器。`core/config-events.js` 仅广播无配置内容的 changed 信号，由首页重新核对服务端版本；广播不能直接触发页面重载。管理保存及备份恢复均在成功后广播。点击刷新仍遵循现有网络首页与版本化资源机制。
+公开路由 `/page-version` 仅支持 GET/HEAD，返回无正文的 204，If-None-Match 命中返回 304，两者均 no-store。`public/home/config-updates.js` 独立处理 10 秒检查、前后台及联网条件、5 秒超时、请求合并及配置同步，失败不干扰内容加载器。`core/config-events.js` 仅广播无配置内容的 changed 信号，由首页重新核对服务端版本；广播仅触发版本校验，成功后同步服务端文档而非直接重载。管理保存及备份恢复均在成功后广播。点击刷新使用带版本文档地址，避免旧入口缓存。
 
 ## 数据源诊断
 
@@ -163,3 +163,11 @@ PWA 只缓存静态资源与通用 `/offline.html`。动态首页与 `/fragments
 `widgets/source.js` 拆出 readWidgetSource 供映射和结构检查复用。POST `/api/admin/widget-inspect` 与预览共享管理员认证、同源校验、每分钟 20 次和全局预算，返回有界字段路径/类型，不返回原始响应值。字段名只接受 validPath 可表达的段，过滤常见敏感字段，数组仅遍历首项；结构检查不要求映射执行成功。关闭客户端请求会取消该次独立预览上游，不能取消公开缓存共享请求。
 
 `admin/field-inspector.js` 的临时选择控件用 data-editor-auxiliary 排除脏状态比较；真正填入路径通过原字段 input 事件更新模型、校验及编辑状态。多值指标沿用 JSON 字段更新路径，列表条目字段转换为相对路径。数值目标排除对象、数组等类型，字符串仍需正式预览判定数值有效性。
+
+## 配置版本与 HTTP 共享缓存
+
+片段 namespace 同时验证 20 位构建版本和 32 位公开随机配置标记。标记复用 createPageVersion，不公开管理配置摘要；旧 token 回源返回 409/no-store/X-Homepage-Reload。请求等待期间配置改变同样拒绝，不能用旧地址封装新配置数据。没有历史配置/数据快照仓库，所以配置版本不能作为数据 immutable 标识。
+
+首页与 `/page/<build>/<token>` 均 no-store；`/page/latest` 和旧文档地址以 no-store 临时重定向到当前版本。ready 的公开片段有限 s-maxage（RSS/磁块 60 秒以内，状态 15 秒），浏览器 max-age=0；天气/搜索、stale/error 及管理响应不共享缓存。html() 对可缓存正文生成内容 ETag，支持 HEAD 和强弱/多值条件请求；错误不会继承可缓存头。
+
+page-sync.js 通过新版本文档地址取同版 DOM，只在响应版本相符且磁块内无焦点时替换 board。app.mountBoard 取消旧片段加载、断开旧 ResizeObserver，重建模块和调度器；旧调度批次不能写入新页面状态。成功同步后 watcher 更新 baseline 并继续检查；失败或焦点保护会重试，构建版本变化仅提示更新脚本。访客主题属性和本地选城不变，不执行响应内脚本。SW 仅为版本文档的导航提供通用离线回退，不保存文档或片段。

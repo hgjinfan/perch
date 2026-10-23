@@ -2,8 +2,10 @@
 export function setupTileLayout(root) {
   if (!globalThis.ResizeObserver) return;
   const grids = [...root.querySelectorAll('.content-board')];
-  let frame;
+  let frame,
+    disposed = false;
   function arrange() {
+    if (disposed) return;
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
       for (const grid of grids) {
@@ -26,4 +28,9 @@ export function setupTileLayout(root) {
   }
   arrange();
   document.fonts?.ready.then(arrange);
+  return () => {
+    disposed = true;
+    observer.disconnect();
+    cancelAnimationFrame(frame);
+  };
 }

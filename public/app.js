@@ -1,3 +1,4 @@
+import { synchronizePage } from './home/page-sync.js';
 import { setupConfigUpdates } from './home/config-updates.js';
 import { setupTileLayout } from './home/tile-layout.js';
 import { setupPwa } from './pwa/client.js';
@@ -7,12 +8,31 @@ import { createScheduler } from './core/scheduler.js';
 import { mountModules } from './home/board.js';
 import { createLoaders } from './home/loaders.js';
 
-const scheduler = createScheduler();
-const configUpdates = setupConfigUpdates();
-const board = mountModules(document.querySelector('#board'));
-const loaders = createLoaders(board);
-setupTileLayout(document.querySelector('#board'));
-let busy = false;
+let scheduler,
+  loaders,
+  stopLayout,
+  generation = 0,
+  busy = false;
+const configUpdates = setupConfigUpdates({
+  onConfig: (version) => synchronizePage(version, { mount: mountBoard }),
+});
+function mountBoard() {
+  generation++;
+  for (const load of loaders?.values() || []) load.dispose?.();
+  stopLayout?.();
+  scheduler = createScheduler();
+  const board = mountModules(document.querySelector('#board'));
+  loaders = createLoaders(board);
+  stopLayout = setupTileLayout(document.querySelector('#board'));
+  for (const [id, load] of loaders) {
+    const interval = Number(board.modules.get(id).node.dataset.refresh);
+    scheduler.register(id, load, Math.max(30000, interval || 60000));
+  }
+  busy = false;
+  icons();
+  updateDate();
+  refresh(true);
+}
 function updateDate() {
   const date = document.querySelector('#date');
   date.textContent = new Intl.DateTimeFormat('zh-CN', {
@@ -25,17 +45,14 @@ function updateDate() {
 async function refresh(force = false) {
   if (busy) return;
   busy = true;
+  const current = generation;
   try {
-    if (await scheduler.refresh(force))
+    if ((await scheduler.refresh(force)) && current === generation)
       document.querySelector('#updated').textContent =
         `上次检查 ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
   } finally {
-    busy = false;
+    if (current === generation) busy = false;
   }
-}
-for (const [id, load] of loaders) {
-  const interval = Number(board.modules.get(id).node.dataset.refresh);
-  scheduler.register(id, load, Math.max(30000, interval || 60000));
 }
 function resume(force = false) {
   updateDate();
@@ -54,7 +71,7 @@ setupPwa({
     refresh(true);
   },
 });
-refresh(true);
+mountBoard();
 configUpdates.check();
 setInterval(resume, 5000);
 document.addEventListener('visibilitychange', () => resume(true));

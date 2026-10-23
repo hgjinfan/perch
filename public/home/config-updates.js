@@ -1,3 +1,4 @@
+import { pageDocumentUrl } from './page-sync.js';
 import { CONFIG_CHANNEL } from '../core/config-events.js';
 export function createConfigWatcher({
   baseline,
@@ -30,9 +31,18 @@ export function createConfigWatcher({
           if (!/^"[a-f0-9]{20}-[a-f0-9]{32}"$/.test(tag || '') || tag === `"${baseline}"`)
             return false;
           changed = true;
-          onChange({ reason: tag.slice(1, 21) === baseline.slice(0, 20) ? 'config' : 'page' });
+          const next = tag.slice(1, -1);
+          const outcome = await onChange({
+            reason: tag.slice(1, 21) === baseline.slice(0, 20) ? 'config' : 'page',
+            version: next,
+          });
+          if (outcome === 'synced') {
+            baseline = next;
+            changed = false;
+          } else if (outcome === false) changed = false;
           return true;
         } catch {
+          changed = false;
           return false;
         }
       })
@@ -43,20 +53,33 @@ export function createConfigWatcher({
   }
   return { check };
 }
-export function setupConfigUpdates() {
+export function setupConfigUpdates({ onConfig } = {}) {
+  let latest;
   const notice = document.querySelector('#config-update');
   const watcher = createConfigWatcher({
     baseline: document.documentElement.dataset.pageVersion,
-    onChange: ({ reason }) => {
+    interval: 10000,
+    onChange: async ({ reason, version }) => {
+      latest = version;
+      if (reason === 'config' && onConfig) {
+        try {
+          if (await onConfig(version)) {
+            if (notice) notice.hidden = true;
+            return 'synced';
+          }
+        } catch {}
+      }
       if (notice) {
         notice.querySelector('span').textContent =
           reason === 'page' ? '首页已有新版本' : '首页配置已更新';
         notice.hidden = false;
       }
+      return false;
     },
   });
   const button = document.querySelector('#refresh-config');
-  if (button) button.onclick = () => location.reload();
+  if (button)
+    button.onclick = () => location.assign(latest ? pageDocumentUrl(latest) : '/page/latest');
   try {
     if (globalThis.BroadcastChannel) {
       const channel = new BroadcastChannel(CONFIG_CHANNEL);

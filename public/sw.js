@@ -40,7 +40,8 @@ self.addEventListener('fetch', (event) => {
   if (
     event.request.mode === 'navigate' &&
     url.origin === self.location.origin &&
-    ['/', '/index.html'].includes(url.pathname)
+    (['/', '/index.html'].includes(url.pathname) ||
+      /^\/page\/(?:latest|[a-f0-9]{20}\/[a-f0-9]{32})$/.test(url.pathname))
   ) {
     event.respondWith(
       fetch(event.request).catch(async () => {

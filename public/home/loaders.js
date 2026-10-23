@@ -7,15 +7,24 @@ export function createLoaders({ modules, serviceTiles }) {
   const loaders = new Map();
   for (const [id, module] of modules) {
     if (!module.node.dataset.fragment) continue;
-    let sequence = 0;
+    let sequence = 0,
+      controller;
+    const dispose = () => {
+      sequence++;
+      controller?.abort();
+    };
     async function load() {
       if (module.node.hidden || !module.node.isConnected || !module.node.dataset.fragment) return;
+      controller?.abort();
+      controller = new AbortController();
       const current = ++sequence;
       module.loading.start();
       try {
         const base = module.node.dataset.fragment;
-        const markup = await requestHtml(id === 'weather' ? weatherFragmentUrl(base) : base);
-        if (current !== sequence) return;
+        const markup = await requestHtml(id === 'weather' ? weatherFragmentUrl(base) : base, {
+          signal: controller.signal,
+        });
+        if (current !== sequence || !module.node.isConnected) return;
         const template = document.createElement('template');
         template.innerHTML = markup;
         const fragment = template.content.querySelector('[data-fragment-result]');
@@ -45,10 +54,12 @@ export function createLoaders({ modules, serviceTiles }) {
         module.loading.settle();
         icons();
       } catch (error) {
-        if (current !== sequence) return;
+        if (current !== sequence || !module.node.isConnected) return;
         if (error.reload) {
           window.dispatchEvent(new Event('homepage:update-required'));
-          module.loading.fail('页面已有新版本', '请点击更新页面。', () => location.reload());
+          module.loading.fail('页面已有新版本', '请点击更新页面。', () =>
+            location.assign('/page/latest'),
+          );
           return;
         }
         if (error.status === 404) {
@@ -98,6 +109,7 @@ export function createLoaders({ modules, serviceTiles }) {
       bindWeatherPicker(module, load);
       bindWeatherHours(module);
     }
+    load.dispose = dispose;
     loaders.set(id, load);
   }
   return loaders;

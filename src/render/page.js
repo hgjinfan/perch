@@ -32,6 +32,9 @@ export function renderHome(config, shell, version, pageVersion) {
       () => `<main id="board" class="board" aria-label="个人仪表盘">${services}${modules}</main>`,
     );
   return version
-    ? markup.replaceAll('data-fragment="/fragments/', `data-fragment="/fragments/${version}/`)
+    ? markup.replaceAll(
+        'data-fragment="/fragments/',
+        `data-fragment="/fragments/${version}/${pageVersion?.slice(21) || ''}/`,
+      )
     : markup;
 }

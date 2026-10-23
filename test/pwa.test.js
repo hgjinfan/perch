@@ -160,6 +160,18 @@ test('Installed shell serves offline without API interception; update activation
   });
   assert.ok((await (await work).text()).endsWith('/offline.html'));
   events.fetch({
+    request: {
+      method: 'GET',
+      mode: 'navigate',
+      url: 'https://home.example/page/' + 'a'.repeat(20) + '/' + 'b'.repeat(32),
+    },
+    respondWith(promise) {
+      work = promise;
+    },
+  });
+  assert.ok((await (await work).text()).endsWith('/offline.html'));
+
+  events.fetch({
     request: new Request('https://home.example/api/admin/config'),
     respondWith() {
       assert.fail('Admin must never be intercepted');

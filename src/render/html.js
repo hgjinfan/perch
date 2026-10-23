@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { safeUrl } from '../../shared/url.js';
 
 export function escapeHtml(value = '') {
@@ -20,10 +21,26 @@ export function link(url, label, className = '') {
 export function empty(title, description, retry = false) {
   return `<div class="empty"><strong>${text(title)}</strong><p>${text(description)}</p>${retry ? '<button type="button" class="retry" data-retry>重新加载</button>' : ''}</div>`;
 }
-export function html(response, body, status = 200, method = 'GET') {
-  response.writeHead(status, {
-    'Content-Type': 'text/html; charset=utf-8',
-    'Cache-Control': 'no-store',
-  });
+export function html(
+  response,
+  body,
+  status = 200,
+  method = 'GET',
+  { cacheControl = 'no-store', request } = {},
+) {
+  const headers = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': cacheControl };
+  if (status === 200 && cacheControl !== 'no-store') {
+    headers.ETag = '"' + createHash('sha256').update(body).digest('hex') + '"';
+    if (
+      request?.headers?.['if-none-match']
+        ?.split(',')
+        .some((tag) => tag.trim() === '*' || tag.trim().replace(/^W\//, '') === headers.ETag)
+    ) {
+      response.writeHead(304, headers);
+      response.end();
+      return;
+    }
+  }
+  response.writeHead(status, headers);
   response.end(method === 'HEAD' ? undefined : body);
 }

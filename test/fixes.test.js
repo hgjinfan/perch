@@ -293,7 +293,8 @@ test('R1: new navigation is stamped with a matching fragment version; old versio
   const markup = await (await fetch(base + '/')).text(),
     version = markup.match(/data-asset-version="([a-f0-9]{20})"/)[1];
   assert.ok(markup.includes(`/assets/${version}/app.js`));
-  assert.ok(markup.includes(`/fragments/${version}/status`));
+  const revision = markup.match(/data-page-version="[a-f0-9]{20}-([a-f0-9]{32})"/)[1];
+  assert.ok(markup.includes(`/fragments/${version}/${revision}/status`));
   const legacy = await globalThis.fetch(base + '/fragments/status');
   assert.equal(legacy.status, 409);
   assert.equal(legacy.headers.get('x-homepage-reload'), '1');
