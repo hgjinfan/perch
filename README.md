@@ -337,3 +337,15 @@ Perch 的正确性不依赖任何 CDN purge 接口，也不需要清除缓存的
 这些改动减少串行依赖和阻塞请求，不代表任何网络环境下都能达到固定毫秒数。部署后应在同样的设备、网络节流和缓存条件下重新检查关键链路及 LCP。
 
 首次配置向导仅允许通过本机地址直接访问（例如 `http://127.0.0.1:3210/setup`，远程服务器可使用 SSH 端口转发），不接受反向代理转发的初始化请求。向导和初始化接口同时要求 ADMIN_PASSWORD 管理员认证，写入要求同源 JSON；初始化或管理员首次保存成功后，初始化接口关闭。
+
+## 数据源本地端到端测试
+
+`node --test test/preset-http.test.js` 会启动四个独立的回环 HTTP 模拟服务及一个真实 Perch 实例，用原生 fetch 验证预设、认证头、代理路径前缀、字段映射、预览、配置保存、公开片段与缓存命中。还覆盖错误/缺失密钥、异常实体、空序列、非法 JSON、重定向与公开失败响应，测试结束自动关闭服务并清理临时数据。
+
+浏览器验证可执行 `npm run build` 后运行 `node scripts/preset-lab.mjs`，打开 `http://127.0.0.1:3216/` 或 `/admin`，四个预设及测试凭据已准备好。`PRESET_LAB_PORT` 可指定其他端口，数据全部位于独立临时目录，不读取或改写正式站点配置；该实验服务仅绑定本机并自动注入测试管理员身份。Ctrl+C 关闭全部测试服务并清理状态。
+
+这些服务是按接口结构实现的协议模拟，不是真实产品部署；能验证 Perch 的完整 HTTP 与浏览器链路，但不覆盖实际产品版本、TLS 证书或权限配置差异。
+
+需要真实数据时，运行 `node scripts/preset-lab.mjs --public`，在四个模拟磁块之外增加 PromLabs 公共 Prometheus（`sum(up)`）和 Jellyfin 官方 stable 演示版本磁块，均无需令牌。服务地址来源：[PromLabs](https://demo.promlabs.com/query)、[Jellyfin 官方演示说明](https://jellyfin.org/docs/general/testing/web/)。公共服务仅供低频手动联调，可能停机、限流或升级，不应当作生产数据源。
+
+可选真实网络验证：`PRESET_PUBLIC_TEST=1 node --test test/preset-public.test.js`，通过真实 Perch 管理预览及公开片段验证这两个接口。默认 `npm test` 跳过此测试，CI 不依赖外部服务可用性。Home Assistant 和 Proxmox 的真实认证、权限验证仍需要独立实例。
