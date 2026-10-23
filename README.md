@@ -4,7 +4,7 @@
 
 ## 本地启动
 
-需要 Node.js 22 或更新版本。当前版本 **v0.1.4**，采用 [MIT 许可证](LICENSE)。
+需要 Node.js 22 或更新版本。当前版本 **v0.1.5**，采用 [MIT 许可证](LICENSE)。
 
 ```sh
 git clone https://github.com/hgjinfan/perch.git
