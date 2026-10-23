@@ -1,16 +1,17 @@
+# syntax=docker/dockerfile:1.7
 FROM node:24-alpine AS client-build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 COPY public ./public
 COPY shared ./shared
 COPY scripts ./scripts
-RUN npm run build
+RUN npm run build && npm prune --omit=dev --no-audit --no-fund
 
 FROM node:24-alpine
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
+COPY --from=client-build /app/package*.json ./
+COPY --from=client-build /app/node_modules ./node_modules
 COPY --from=client-build /app/dist ./dist
 COPY src ./src
 COPY shared ./shared
