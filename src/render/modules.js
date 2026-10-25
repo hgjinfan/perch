@@ -98,7 +98,7 @@ function age(date) {
       ? `${Math.floor(minutes / 60)}h`
       : `${Math.floor(minutes / 1440)}d`;
 }
-function renderFeed(items) {
+function renderFeed(items, filtered = false) {
   return items.length
     ? items
         .map(
@@ -106,14 +106,19 @@ function renderFeed(items) {
             `<article class="news"><span class="rank">${i + 1}</span>${link(item.url, text(item.title))}<time${item.date ? ` datetime="${text(item.date)}" title="${text(item.date)}"` : ''}>${text(age(item.date))}</time></article>`,
         )
         .join('')
-    : empty('暂无文章', '订阅源已连接，暂时没有可显示的内容。');
+    : filtered
+      ? empty('暂无符合条件的文章', '可以放宽筛选条件，或稍后再试。')
+      : empty('暂无文章', '订阅源已连接，暂时没有可显示的内容。');
 }
 export function renderModuleResult(module, result, config) {
   let body, title;
   if (result.state === 'unconfigured') body = staticBody(module);
   else {
     if (!result.data) throw new Error('No module data');
-    if (module.kind === 'feed') body = renderFeed(result.data);
+    if (module.kind === 'feed') {
+      const filters = config.feeds.find((feed) => feed.id === module.sourceId)?.filters;
+      body = renderFeed(result.data, Boolean(filters?.include?.length || filters?.exclude?.length));
+    }
     if (module.kind === 'weather') {
       body = renderWeather(result);
       if (!module.customTitle) title = result.location?.name;

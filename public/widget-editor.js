@@ -92,6 +92,7 @@ export function setupWidgets(config, onModulesChanged) {
           if (widgetDefinitions[value].controls.fields && !w.fields.length)
             w.fields = structuredClone(widgetDefinitions[value].fields);
           draw();
+          onModulesChanged();
         },
         { options: types },
       );
@@ -180,12 +181,20 @@ export function setupWidgets(config, onModulesChanged) {
         });
       }
       if (widgetDefinitions[w.type].controls.limit)
-        input('显示条数', w.limit, (value) => (w.limit = Number(value)), {
-          type: 'number',
-          required: true,
-          min: 1,
-          max: 20,
-        });
+        input(
+          '显示条数',
+          w.limit,
+          (value) => {
+            w.limit = Number(value);
+            onModulesChanged();
+          },
+          {
+            type: 'number',
+            required: true,
+            min: 1,
+            max: 20,
+          },
+        );
       if (widgetDefinitions[w.type].controls.threshold)
         input(
           '告警阈值（%）',

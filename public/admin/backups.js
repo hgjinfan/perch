@@ -19,6 +19,7 @@ const displayPath = (path) =>
         source: '数据来源',
         url: '地址',
         healthUrl: '检测地址',
+        internalUrl: '内网地址',
         name: '名称',
         refresh: '刷新间隔',
         mapping: '字段映射',

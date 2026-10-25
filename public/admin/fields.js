@@ -1,6 +1,7 @@
 import { safeUrl } from '../../shared/url.js';
 import { attachFieldValidation } from './validation.js';
 import { node } from '../core/dom.js';
+let helpSequence = 0;
 export function createFieldEditor(controls, { drafts, prefix = '' } = {}) {
   return function input(
     label,
@@ -17,6 +18,7 @@ export function createFieldEditor(controls, { drafts, prefix = '' } = {}) {
       required = false,
       maxLength,
       validate,
+      draftId,
     } = {},
   ) {
     const wrap = node('label'),
@@ -36,7 +38,7 @@ export function createFieldEditor(controls, { drafts, prefix = '' } = {}) {
     if (min !== undefined) control.min = min;
     if (max !== undefined) control.max = max;
     if (step !== undefined) control.step = step;
-    const draftKey = prefix + ':' + label;
+    const draftKey = prefix + ':' + (draftId || label);
     if (drafts?.has(draftKey)) {
       const draft = drafts.get(draftKey);
       control.value = draft.value;
@@ -65,6 +67,11 @@ export function createFieldEditor(controls, { drafts, prefix = '' } = {}) {
     if (hint) {
       const help = node('p', hint);
       help.className = 'field-help';
+      help.id = `field-help-${++helpSequence}`;
+      control.setAttribute(
+        'aria-describedby',
+        [control.getAttribute('aria-describedby'), help.id].filter(Boolean).join(' '),
+      );
       controls.append(help);
     }
     return control;

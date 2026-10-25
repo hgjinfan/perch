@@ -3,7 +3,7 @@ import { safeUrl } from '../../shared/url.js';
 import { moduleVisible } from '../config/visibility.js';
 
 export function renderServiceState(service, item = { state: 'pending' }) {
-  const state = !safeUrl(service.url) ? 'unconfigured' : item.state;
+  const state = !safeUrl(service.url || service.internalUrl) ? 'unconfigured' : item.state;
   const labels = {
     pending: ['检测中', '正在检测服务状态'],
     unconfigured: ['待配置', '尚未配置访问地址'],
@@ -23,20 +23,26 @@ export function renderServiceGrid(config) {
   const enabled = moduleVisible(config, 'status') && config.services.length > 0;
   const tiles = config.services
     .map((service) => {
-      const configured = Boolean(safeUrl(service.url));
+      const configured = Boolean(safeUrl(service.url || service.internalUrl));
       const status = enabled
         ? renderServiceState(service)
         : configured
           ? ''
           : '<span class="service-health">待配置</span>';
       const body = `${icon(service.icon)}<span class="app-name">${text(service.name)}</span>${status}`;
-      const attributes = ` data-service="${text(service.id)}" aria-label="${text(service.name)}"${enabled ? ` aria-describedby="service-detail-${text(service.id)}"` : ''}`;
+      const attributes = ` data-external-url="${text(safeUrl(service.url) || '')}" data-internal-url="${text(safeUrl(service.internalUrl) || '')}" data-service="${text(service.id)}" aria-label="${text(service.name)}"${enabled ? ` aria-describedby="service-detail-${text(service.id)}"` : ''}`;
       return configured
-        ? link(service.url, body, 'tile app').replace('<a ', `<a${attributes} `)
+        ? link(service.url || service.internalUrl, body, 'tile app').replace(
+            '<a ',
+            `<a${attributes} `,
+          )
         : `<div class="tile app unconfigured"${attributes}>${body}</div>`;
     })
     .join('');
-  return `<div class="service-region" role="group" aria-label="服务入口与状态"${enabled ? ' data-module="status" data-fragment="/fragments/status" data-refresh="60000"' : ''}><div class="service-grid module-content" data-load-state="ready" aria-busy="false">${tiles}</div>${enabled ? '<span class="module-update visually-hidden" role="status" hidden>正在更新服务状态</span><time id="service-freshness" class="service-freshness" data-freshness hidden></time><div data-load-feedback></div>' : ''}</div>`;
+  const switcher = config.services.some((s) => safeUrl(s.internalUrl))
+    ? '<label class="service-route-label">访问入口<select data-service-route aria-label="服务访问入口"><option value="external">公网优先</option><option value="internal">内网优先</option></select></label>'
+    : '';
+  return `${switcher}<div class="service-region" role="group" aria-label="服务入口与状态"${enabled ? ' data-module="status" data-fragment="/fragments/status" data-refresh="60000"' : ''}><div class="service-grid module-content" data-load-state="ready" aria-busy="false">${tiles}</div>${enabled ? '<span class="module-update visually-hidden" role="status" hidden>正在更新服务状态</span><time id="service-freshness" class="service-freshness" data-freshness hidden></time><div data-load-feedback></div>' : ''}</div>`;
 }
 
 export function renderServiceResult(config, result) {

@@ -1,3 +1,4 @@
+import { selectFeedEntries } from './feeds/filter.js';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 
 import { safeUrl } from '../shared/url.js';
@@ -5,7 +6,7 @@ export { safeUrl } from '../shared/url.js';
 const list = (value) => (value == null ? [] : Array.isArray(value) ? value : [value]);
 const text = (value) =>
   typeof value === 'object' ? String(value?.['#text'] ?? '') : String(value ?? '');
-export function parseFeed(xml, limit = 5) {
+export function parseFeed(xml, limit = 5, filters) {
   if (/<!DOCTYPE|<!ENTITY/i.test(xml) || XMLValidator.validate(xml) !== true)
     throw new Error('Invalid feed');
   const doc = new XMLParser({
@@ -15,28 +16,27 @@ export function parseFeed(xml, limit = 5) {
   }).parse(xml);
   if (!doc.rss && !doc.feed && !doc['rdf:RDF']) throw new Error('Not an RSS or Atom feed');
   const entries = doc.rss?.channel?.item ?? doc.feed?.entry ?? doc['rdf:RDF']?.item;
-  return list(entries)
-    .flatMap((item) => {
-      const links = list(item.link);
-      const link =
-        links.find((l) => l?.['@_rel'] === 'alternate') ??
-        links.find((l) => !l?.['@_rel']) ??
-        links[0];
-      const url = safeUrl(typeof link === 'object' ? link?.['@_href'] : link);
-      if (!url) return [];
-      const date = text(item.pubDate ?? item.published ?? item.updated ?? item['dc:date']);
-      return [
-        {
-          title:
-            text(item.title)
-              .replace(/<[^>]*>/g, '')
-              .trim() || '未命名文章',
-          url,
-          date: Number.isNaN(Date.parse(date)) ? null : new Date(date).toISOString(),
-        },
-      ];
-    })
-    .slice(0, Math.max(1, Math.min(20, Number(limit) || 5)));
+  const parsed = list(entries).flatMap((item) => {
+    const links = list(item.link);
+    const link =
+      links.find((l) => l?.['@_rel'] === 'alternate') ??
+      links.find((l) => !l?.['@_rel']) ??
+      links[0];
+    const url = safeUrl(typeof link === 'object' ? link?.['@_href'] : link);
+    if (!url) return [];
+    const date = text(item.pubDate ?? item.published ?? item.updated ?? item['dc:date']);
+    return [
+      {
+        title:
+          text(item.title)
+            .replace(/<[^>]*>/g, '')
+            .trim() || '未命名文章',
+        url,
+        date: Number.isNaN(Date.parse(date)) ? null : new Date(date).toISOString(),
+      },
+    ];
+  });
+  return selectFeedEntries(parsed, limit, filters);
 }
 export async function readRemote(url, fetcher = fetch) {
   if (!safeUrl(url)) throw new Error('Invalid URL');
@@ -113,7 +113,7 @@ export function createCache(now = Date.now, { maxEntries = 512, onEvent } = {}) 
   };
 }
 export async function checkService(service, fetcher = fetch, onError = () => {}) {
-  const url = safeUrl(service.healthUrl || service.url);
+  const url = safeUrl(service.healthUrl || service.url || service.internalUrl);
   if (!url) return { id: service.id, state: 'unconfigured' };
   const start = performance.now();
   try {

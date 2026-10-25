@@ -1,3 +1,6 @@
+import { resetDraftEditors } from './admin/editor-drafts.js';
+import { mountPhoneEditor } from './admin/phone-layout.js';
+import { mountFeedFilters } from './admin/feed-filters.js';
 import { mountConnections } from './admin/connections.js';
 import { mountLazyPanel } from './admin/lazy-panel.js';
 import { notifyConfigChange } from './core/config-events.js';
@@ -16,10 +19,12 @@ let config,
   savedConfig,
   saving = false,
   diagnosticsPanel;
+const feedDrafts = new Map();
 const field = (name) => form.elements.namedItem(name);
 function moduleOptions() {
   const target = document.querySelector('#module-options');
   mountLayoutEditor(document.querySelector('#layout-editor'), config);
+  mountPhoneEditor(document.querySelector('#phone-editor'), config);
   target.replaceChildren();
   const entries = [['status', '服务入口状态']];
   for (const [id, name] of entries) {
@@ -39,7 +44,8 @@ function moduleOptions() {
 const fields = {
   services: [
     ['name', '名称'],
-    ['url', '访问地址'],
+    ['url', '公网访问地址'],
+    ['internalUrl', '内网访问地址（可选）'],
     ['healthUrl', '健康检查地址（可选）'],
     ['icon', '图标名称'],
   ],
@@ -60,6 +66,14 @@ const fields = {
 };
 function editor(key) {
   const target = document.querySelector(`#${key}-editor`);
+  if (key === 'feeds')
+    for (const control of target.querySelectorAll('[data-draft-key]')) {
+      if (!control.validity.valid)
+        feedDrafts.set(control.dataset.draftKey, {
+          value: control.value,
+          message: control.validationMessage,
+        });
+    }
   target.replaceChildren();
   config[key].forEach((item, index) => {
     const row = node('div');
@@ -71,7 +85,7 @@ function editor(key) {
       input.type =
         property === 'limit'
           ? 'number'
-          : ['url', 'site', 'healthUrl'].includes(property)
+          : ['url', 'site', 'healthUrl', 'internalUrl'].includes(property)
             ? 'url'
             : 'text';
       if (property === 'limit') {
@@ -85,12 +99,12 @@ function editor(key) {
       }
       input.oninput = () => {
         item[property] = property === 'limit' ? Number(input.value) : input.value;
-        if (key === 'feeds' && property === 'name') moduleOptions();
+        if (key === 'feeds' && ['name', 'limit'].includes(property)) moduleOptions();
       };
       label.append(input);
       row.append(label);
       const check = attachFieldValidation(input, (value) =>
-        ['url', 'site', 'healthUrl'].includes(property) && value && !safeUrl(value)
+        ['url', 'site', 'healthUrl', 'internalUrl'].includes(property) && value && !safeUrl(value)
           ? '网址只支持 HTTP(S)，不能包含账号密码'
           : property === 'name' && !value.trim()
             ? '名称不能为空'
@@ -126,6 +140,7 @@ function editor(key) {
       row.append(move);
     }
     row.append(remove);
+    if (key === 'feeds') mountFeedFilters(row, item, feedDrafts);
     target.append(row);
   });
 }
@@ -143,6 +158,11 @@ for (const button of document.querySelectorAll('[data-add]'))
     editor(key);
     moduleOptions();
   };
+document
+  .querySelector('#layout-editor')
+  .addEventListener('change', () =>
+    mountPhoneEditor(document.querySelector('#phone-editor'), config),
+  );
 field('weather-enabled').onchange = () => {
   const enabled = field('weather-enabled').checked;
   document.querySelector('#weather-fields').hidden = !enabled;
@@ -167,7 +187,9 @@ function captureConfig() {
   };
 }
 function renderEditor(value) {
+  resetDraftEditors(form);
   config = value;
+  feedDrafts.clear();
   field('title').value = config.title;
   field('timezone').value = config.timezone;
   field('density').value = config.layout.density;

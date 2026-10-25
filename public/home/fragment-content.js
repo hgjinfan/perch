@@ -1,3 +1,4 @@
+import { applyPhoneLimit } from './phone-layout.js';
 import { updateFreshness } from './freshness.js';
 
 // Both startup hydration and later refreshes apply the same server-rendered fragment contract.
@@ -20,6 +21,7 @@ export function applyFragment(module, fragment, serviceTiles) {
     }
   }
   if (id !== 'status') module.content.replaceChildren(...fragment.childNodes);
+  applyPhoneLimit(module.node);
   if (fragment.dataset.title)
     module.node.querySelector('[data-module-title]').textContent = fragment.dataset.title;
   if (id === 'status') {

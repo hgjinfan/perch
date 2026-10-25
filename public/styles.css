@@ -3,7 +3,7 @@
   --bg: light-dark(#eef0f3, #191c20);
   --tile: light-dark(#fafbfd, #22262b);
   --text: light-dark(#303844, #e3e6eb);
-  --sub: light-dark(#67717d, #a2abb6);
+  --sub: light-dark(#626c78, #a2abb6);
   --line: light-dark(#dde2e8, #343b44);
   --accent: light-dark(#426da8, #91addb);
   --green: light-dark(#287b55, #86bb9d);
@@ -56,7 +56,7 @@ button {
   cursor: pointer;
 }
 button:disabled {
-  cursor: wait;
+  cursor: default;
   opacity: 0.55;
 }
 a {
@@ -65,7 +65,9 @@ a {
 button:focus-visible,
 a:focus-visible,
 select:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
 }
@@ -1218,4 +1220,51 @@ progress.warning::-moz-progress-bar {
 
 .launch-skeleton .group-title .skeleton-heading {
   margin: 0;
+}
+
+@media (max-width: 520px) {
+  [data-phone-hidden='true'] {
+    display: none !important;
+  }
+}
+
+.group-toggle {
+  cursor: pointer;
+  color: var(--sub);
+  min-height: 36px;
+  padding-block: 7px;
+  margin-bottom: 8px;
+  border-radius: 7px;
+}
+.group-toggle .group-title {
+  display: inline;
+}
+.service-route-label {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--sub);
+  font-size: 12px;
+}
+
+/* Shared control states: disabled is unavailable; busy is an active operation. */
+button[aria-busy='true'] {
+  cursor: progress;
+}
+.group-toggle:hover {
+  color: var(--text);
+}
+@media (pointer: coarse) {
+  summary {
+    min-height: 44px;
+    padding-block: 10px;
+  }
+  .group-toggle {
+    min-height: 44px;
+  }
+}
+footer {
+  font-size: 12px;
 }

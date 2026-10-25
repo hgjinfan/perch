@@ -16,6 +16,7 @@ export function createLoaders({ modules, serviceTiles }) {
       controller?.abort();
     };
     async function load() {
+      if (module.node.closest('details.board-group:not([open])')) return;
       if (module.node.hidden || !module.node.isConnected || !module.node.dataset.fragment) return;
       if (module.node.dataset.initialHydrated === 'true') {
         delete module.node.dataset.initialHydrated;
@@ -60,7 +61,10 @@ export function createLoaders({ modules, serviceTiles }) {
               tile.removeAttribute('title');
               tile.removeAttribute('aria-describedby');
             }
-          } else module.node.hidden = true;
+          } else {
+            module.node.hidden = true;
+            module.node.dataset.moduleUnavailable = 'true';
+          }
           module.loading.settle();
           return;
         }

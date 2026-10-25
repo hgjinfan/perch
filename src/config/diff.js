@@ -15,7 +15,7 @@ export function compareConfigs(current, incoming) {
       return;
     }
     const sensitive =
-      /(?:^|\.)(connections|source|headers|body|data|url|healthUrl|mapping|fields)(?:\.|\[|$)/.test(
+      /(?:^|\.)(connections|source|headers|body|data|url|internalUrl|healthUrl|mapping|fields)(?:\.|\[|$)/.test(
         path,
       );
     if (

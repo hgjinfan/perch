@@ -1,3 +1,4 @@
+import { renderConfigHealth } from './config-health.js';
 import { requestJson } from '../core/api.js';
 import { node } from '../core/dom.js';
 const time = (value) =>
@@ -51,6 +52,8 @@ export function mountDiagnostics(root) {
     refreshQueued = false;
   function controls() {
     refreshButton.disabled = checking;
+    const healthButton = root.querySelector('#health-refresh');
+    if (healthButton) healthButton.disabled = checking;
     for (const button of list.querySelectorAll('button'))
       button.disabled = checking || button.dataset.enabled !== 'true';
   }
@@ -147,7 +150,7 @@ export function mountDiagnostics(root) {
       if (current !== epoch) return;
       report = result;
       draw();
-      await runtime(current);
+      await Promise.all([runtime(current), renderConfigHealth(root, () => current === epoch)]);
       if (current !== epoch) return;
       message.textContent = `记录更新于 ${time(report.generatedAt)}，共 ${report.sources.length} 个数据源。`;
     } catch (error) {
@@ -168,7 +171,7 @@ export function mountDiagnostics(root) {
       if (current !== epoch) return;
       report = result;
       draw();
-      await runtime(current);
+      await Promise.all([runtime(current), renderConfigHealth(root, () => current === epoch)]);
       if (current !== epoch) return;
       message.textContent = `检查完成，记录更新于 ${time(report.generatedAt)}。`;
     } catch (error) {
@@ -186,6 +189,8 @@ export function mountDiagnostics(root) {
     if (root.open) refresh();
   });
   refreshButton.onclick = refresh;
+  const healthButton = root.querySelector('#health-refresh');
+  if (healthButton) healthButton.onclick = refresh;
   search.oninput = draw;
   filter.onchange = draw;
   return { refresh };

@@ -69,7 +69,7 @@ export function createDashboardService(
         if (event.key === 'status') {
           if (event.expiresAt !== undefined)
             for (const service of store.get().services)
-              if (service.url || service.healthUrl)
+              if (service.url || service.healthUrl || service.internalUrl)
                 diagnostics.observe({
                   key: `service:${service.id}`,
                   type: 'cache',
@@ -97,7 +97,7 @@ export function createDashboardService(
       const active = new Map([
         ...config.feeds
           .filter((f) => moduleVisible(config, `feed-${f.id}`) && f.url)
-          .map((f) => [`feed:${f.id}`, signature([f.url, f.limit])]),
+          .map((f) => [`feed:${f.id}`, signature([f.url, f.limit, f.filters])]),
         ...config.widgets
           .filter((w) => !config.layout.hidden.includes(`widget-${w.id}`))
           .map((w) => [`widget:${w.id}`, signature(widgetInputs(w, config.connections))]),
@@ -120,7 +120,7 @@ export function createDashboardService(
         name: s.name,
         kind: 'service',
         enabled: moduleVisible(config, 'status'),
-        configured: Boolean(s.url || s.healthUrl),
+        configured: Boolean(s.url || s.healthUrl || s.internalUrl),
         sourceType: 'http',
       })),
       ...config.feeds.map((f) => ({
@@ -160,7 +160,7 @@ export function createDashboardService(
         Promise.all(
           config.services.map(async (s) => {
             const key = `service:${s.id}`;
-            if (epoch === store.revision && (s.url || s.healthUrl))
+            if (epoch === store.revision && (s.url || s.healthUrl || s.internalUrl))
               diagnostics.observe({ key, type: 'start' });
             let failure;
             const result = await checkService(s, requestFetcher, (error) => (failure = error));
@@ -182,8 +182,8 @@ export function createDashboardService(
       const feed = config.feeds.find((f) => f.id === id);
       if (!feed) throw new HttpError(404, 'Not found');
       if (!feed.url) return { state: 'unconfigured' };
-      return resource(`feed:${id}`, [feed.url, feed.limit], 300000, async () =>
-        parseFeed(await readRemote(feed.url, requestFetcher), feed.limit),
+      return resource(`feed:${id}`, [feed.url, feed.limit, feed.filters], 300000, async () =>
+        parseFeed(await readRemote(feed.url, requestFetcher), feed.limit, feed.filters),
       );
     },
     widget(id, requestFetcher = fetcher) {

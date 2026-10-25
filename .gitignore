@@ -16,3 +16,12 @@ coverage/
 artifacts/
 
 dist/
+
+# Private local Codex configuration
+/.codex/
+
+# Private agent instructions and imported rule documentation
+AGENTS.md
+AGENTS.override.md
+/docs/CODEX_SUBAGENT_RULES.md
+/agents/

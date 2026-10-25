@@ -94,7 +94,8 @@
   font-size: 13px;
   margin: 20px 0 10px;
 }
-.widget-editor textarea {
+.widget-editor textarea,
+.feed-filters textarea {
   width: 65%;
   min-height: 100px;
   resize: vertical;
@@ -133,7 +134,8 @@
   align-items: start;
 }
 .widget-editor input,
-.widget-editor textarea {
+.widget-editor textarea,
+.feed-filters textarea {
   flex-shrink: 0;
 }
 
@@ -547,4 +549,109 @@
   overflow-wrap: anywhere;
   text-align: left;
   max-width: 100%;
+}
+
+.feed-filters {
+  margin-top: 14px;
+}
+.feed-filters summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+.feed-filters textarea {
+  font: inherit;
+  font-size: 13px;
+  min-height: 72px;
+}
+
+.phone-settings {
+  margin: 20px 0;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.phone-settings summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+.phone-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.phone-item > strong {
+  display: block;
+}
+.phone-item > button {
+  margin-right: 12px;
+}
+
+/* Shared admin field and action dimensions; mobile labels stack above controls. */
+.admin-shell input:not([type='checkbox']):not([type='file']),
+.admin-shell select {
+  min-height: 40px;
+}
+.admin-shell select {
+  width: 65%;
+  min-width: 0;
+}
+.layout-tile select {
+  width: auto;
+}
+.phone-item > button {
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.health-finding-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.health-severity {
+  font-size: 12px;
+  font-weight: 500;
+}
+.health-severity-error {
+  color: var(--red);
+}
+.health-severity-warning {
+  color: var(--amber);
+}
+.health-severity-info {
+  color: var(--sub);
+}
+.health-advice {
+  color: var(--sub);
+  font-size: 13px;
+  line-height: 1.65;
+}
+@media (max-width: 520px) {
+  .admin-shell label {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .admin-shell label:has(input[type='checkbox']) {
+    flex-direction: row;
+    align-items: center;
+  }
+  .admin-shell input:not([type='checkbox']),
+  .admin-shell select,
+  .admin-shell textarea {
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .admin-shell textarea {
+    min-height: 120px;
+  }
+  .admin-shell input[type='checkbox'] {
+    flex-shrink: 0;
+  }
+  .save-row {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .layout-tile label {
+    flex: 1 1 100%;
+  }
 }

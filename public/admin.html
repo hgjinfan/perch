@@ -58,6 +58,10 @@
               分组可排序，磁块可跨组移动和设置宽度。高度随内容变化，窄屏自动减少列数。修改后保存应用。
             </p>
             <div id="layout-editor"></div>
+            <details class="phone-settings">
+              <summary>手机展示覆盖</summary>
+              <div id="phone-editor"></div>
+            </details>
             <h3>顶部服务状态</h3>
             <div id="module-options"></div>
           </section>
@@ -153,6 +157,24 @@
         <p class="field-help">
           使用当前已保存配置。读取列表不会请求上游；检查遵循缓存，服务入口共享一次状态检测。记录仅保存在当前进程内存，重启或保存配置后重新累计。
         </p>
+        <section aria-label="配置体检">
+          <h3>配置体检</h3>
+          <p class="field-help">
+            检查已保存配置及已有诊断记录，不请求上游。密钥缺失会列出变量名；接口问题请结合下方“检查”结果。
+          </p>
+          <button type="button" id="health-refresh">重新体检</button>
+          <a
+            class="backup-download"
+            href="/api/admin/diagnostics/export"
+            download="perch-diagnostics.json"
+            >导出脱敏诊断报告</a
+          >
+          <p class="field-help">
+            报告不含名称、地址、密钥、环境变量名或原始响应，可用于排错；不包含未保存的编辑。
+          </p>
+          <p id="health-message" role="status"></p>
+          <div id="health-findings"></div>
+        </section>
         <div class="diagnostics-tools">
           <label
             >筛选<input

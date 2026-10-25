@@ -1,3 +1,6 @@
+import { setupGroupCollapse } from './home/group-collapse.js';
+import { setupServiceRoutes } from './home/service-routes.js';
+import { setupPhoneLayout } from './home/phone-layout.js';
 import { rememberLayout } from './pwa/layout-cache.js';
 import { synchronizePage } from './home/page-sync.js';
 import { setupConfigUpdates } from './home/config-updates.js';
@@ -12,8 +15,12 @@ import { updateFreshness } from './home/freshness.js';
 let scheduler,
   loaders,
   stopLayout,
+  stopPhone,
+  stopGroups,
+  stopRoutes,
   generation = 0,
-  busy = false;
+  busy = false,
+  queuedForce = false;
 const configUpdates = setupConfigUpdates({
   onConfig: (version) => synchronizePage(version, { mount: mountBoard }),
 });
@@ -21,7 +28,22 @@ function mountBoard() {
   generation++;
   for (const load of loaders?.values() || []) load.dispose?.();
   stopLayout?.();
+  stopPhone?.();
+  stopGroups?.();
+  stopRoutes?.();
   scheduler = createScheduler();
+  const root = document.querySelector('#board');
+  stopGroups = setupGroupCollapse(root, (open) => {
+    if (open) refresh(true);
+    rememberLayout();
+  });
+  stopRoutes = setupServiceRoutes(root);
+  stopPhone = setupPhoneLayout(root, () => {
+    stopLayout?.();
+    stopLayout = setupTileLayout(root);
+    refresh(true);
+    rememberLayout();
+  });
   const board = mountModules(document.querySelector('#board'));
   loaders = createLoaders(board);
   stopLayout = setupTileLayout(document.querySelector('#board'));
@@ -30,6 +52,7 @@ function mountBoard() {
     scheduler.register(id, load, Math.max(30000, interval || 60000));
   }
   busy = false;
+  queuedForce = false;
   updateDate();
   updateFreshness();
   refresh(true);
@@ -45,7 +68,10 @@ function updateDate() {
   }).format(new Date());
 }
 async function refresh(force = false) {
-  if (busy) return;
+  if (busy) {
+    if (force) queuedForce = true;
+    return;
+  }
   busy = true;
   const current = generation;
   try {
@@ -53,7 +79,13 @@ async function refresh(force = false) {
       document.querySelector('#updated').textContent =
         `上次检查 ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
   } finally {
-    if (current === generation) busy = false;
+    if (current === generation) {
+      busy = false;
+      if (queuedForce) {
+        queuedForce = false;
+        refresh(true);
+      }
+    }
   }
 }
 function resume(force = false) {

@@ -1,3 +1,5 @@
+import { restoreGroupCollapse } from '../home/group-collapse.js';
+import { isPhone } from '../home/phone-layout.js';
 import { parseFragment, applyFragment } from '../home/fragment-content.js';
 import { weatherFragmentUrl } from '../home/weather.js';
 
@@ -6,7 +8,19 @@ export async function hydrateInitialContent(
   parsed,
   { fetcher = fetch, waitMs = 900, concurrency = 4 } = {},
 ) {
-  const nodes = [...parsed.querySelectorAll('[data-module][data-fragment]')];
+  restoreGroupCollapse(parsed);
+  const nodes = [...parsed.querySelectorAll('[data-module][data-fragment]')].filter(
+    (node) =>
+      (!isPhone() || node.dataset.phoneHidden !== 'true') &&
+      ((isPhone() && node.dataset.phoneOrder !== undefined) ||
+        !node.closest('details.board-group:not([open])')),
+  );
+  if (isPhone())
+    nodes.sort((a, b) => {
+      const rank = (node) =>
+        node.dataset.module === 'status' ? -1 : Number(node.dataset.phoneOrder ?? Infinity);
+      return rank(a) - rank(b);
+    });
   if (!nodes.length) return;
   const tiles = new Map(
     [...parsed.querySelectorAll('[data-service]')].map((tile) => [tile.dataset.service, tile]),

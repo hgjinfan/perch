@@ -1,3 +1,5 @@
+import { inspectConfiguration } from '../services/config-health.js';
+import { createDiagnosticExport } from '../services/diagnostic-export.js';
 import { validateConnections, resolveWidgetConnection } from '../widgets/connections.js';
 import { compareConfigs } from '../config/diff.js';
 import { inspectWidget } from '../widgets/source.js';
@@ -17,6 +19,20 @@ export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboar
   }
   return async (path, request, response) => {
     guard(request, response);
+    if (path === '/api/admin/config-check' || path === '/api/admin/diagnostics/export') {
+      requireMethod(request, 'GET');
+      const config = store.get();
+      const diagnostics = dashboard.diagnostics();
+      const health = inspectConfiguration(config, env, diagnostics);
+      if (path.endsWith('/export')) {
+        response.setHeader('Content-Disposition', 'attachment; filename="perch-diagnostics.json"');
+        return json(
+          response,
+          createDiagnosticExport(config, diagnostics, health, fetcher.snapshot?.()),
+        );
+      }
+      return json(response, { ...health, generatedAt: Date.now() });
+    }
     if (path === '/api/admin/runtime') {
       requireMethod(request, 'GET');
       return json(response, {

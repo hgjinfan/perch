@@ -1,3 +1,4 @@
+import { isPhone } from '../home/phone-layout.js';
 import { setupTileLayout } from '../home/tile-layout.js';
 
 export const LAYOUT_CACHE_KEY = 'perch-startup-layout-v1';
@@ -64,35 +65,46 @@ export function captureLayout(host = document, now = Date.now()) {
       pageVersion: host.documentElement.dataset.pageVersion,
       density: host.documentElement.dataset.density || 'comfortable',
       services: board.querySelectorAll('[data-service]').length,
-      groups: [...board.querySelectorAll('.board-group')].map((group) => {
-        const grid = group.querySelector('.content-board');
-        return {
-          columns: Number(grid?.dataset.columns),
-          heading: Boolean(group.querySelector('.group-title')),
-          tiles: [...(grid?.children || [])]
-            .filter((node) => node.matches('.module'))
-            .map((node) => ({
-              kind: node.dataset.placeholderKind || 'list',
-              span: node.dataset.span === 'full' ? 'full' : Number(node.dataset.span || 1),
-              rows: Math.max(1, Math.min(8, Number(node.dataset.placeholderRows) || 3)),
-            })),
-        };
-      }),
+      groups: [...board.querySelectorAll('.board-group')]
+        .filter((group) => !group.hidden && (!group.matches('details') || group.open))
+        .map((group) => {
+          const grid = group.querySelector('.content-board');
+          return {
+            columns: Number(grid?.dataset.columns),
+            heading: Boolean(group.querySelector('.group-title')),
+            tiles: [...(grid?.children || [])]
+              .filter((node) => node.matches('.module') && !node.hidden)
+              .map((node) => ({
+                kind: node.dataset.placeholderKind || 'list',
+                span: node.dataset.span === 'full' ? 'full' : Number(node.dataset.span || 1),
+                rows: Math.max(1, Math.min(8, Number(node.dataset.placeholderRows) || 3)),
+              })),
+          };
+        }),
     },
     now,
   );
 }
-export function rememberLayout(host = document, { storage, now = Date.now() } = {}) {
+export function rememberLayout(
+  host = document,
+  { storage, now = Date.now(), phone = isPhone() } = {},
+) {
   try {
     const record = captureLayout(host, now);
-    if (record) (storage || localStorage).setItem(LAYOUT_CACHE_KEY, JSON.stringify(record));
+    if (record)
+      (storage || localStorage).setItem(
+        phone ? LAYOUT_CACHE_KEY + ':phone' : LAYOUT_CACHE_KEY,
+        JSON.stringify(record),
+      );
   } catch {
     /* Disabled storage must not interfere with opening the homepage. */
   }
 }
-export function readLayout({ storage, now = Date.now() } = {}) {
+export function readLayout({ storage, now = Date.now(), phone = isPhone() } = {}) {
   try {
-    const raw = (storage || localStorage).getItem(LAYOUT_CACHE_KEY);
+    const raw = (storage || localStorage).getItem(
+      phone ? LAYOUT_CACHE_KEY + ':phone' : LAYOUT_CACHE_KEY,
+    );
     if (!raw || raw.length > 16000) return null;
     return normalizeLayout(JSON.parse(raw), now);
   } catch {

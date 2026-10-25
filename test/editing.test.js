@@ -112,3 +112,34 @@ test('lazy administrative panels load once even when their mount function return
   assert.equal(loads, 1);
   assert.equal(mounts, 1);
 });
+
+test('full editor resets discard invalid dynamic fields while leaving other settings and panels intact', async () => {
+  const { resetDraftEditors } = await import('../public/admin/editor-drafts.js');
+  const ids = ['feeds-editor', 'widgets-editor', 'connections-editor', 'phone-editor'];
+  const { document } = parseHTML(
+    '<form><input name="title" value="saved">' +
+      ids.map((id) => `<div id="${id}"><input value="saved"></div>`).join('') +
+      '<div id="backup-settings"><input value="file-state"></div></form>',
+  );
+  const form = document.querySelector('form');
+  const session = createEditSession({
+    form,
+    capture: () => ({ title: 'saved' }),
+    onState: () => {},
+    window: { addEventListener() {} },
+  });
+  session.saved();
+  for (const id of ids) document.querySelector(`#${id} input`).value = 'invalid old draft';
+  assert.equal(session.dirty, true);
+  resetDraftEditors(form);
+  for (const id of ids) {
+    const target = document.getElementById(id);
+    assert.equal(target.children.length, 0);
+    const input = document.createElement('input');
+    input.value = 'saved';
+    target.append(input);
+  }
+  assert.equal(session.dirty, false);
+  assert.equal(form.querySelector('[name="title"]').value, 'saved');
+  assert.equal(form.querySelector('#backup-settings input').value, 'file-state');
+});

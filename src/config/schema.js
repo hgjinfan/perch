@@ -1,3 +1,5 @@
+import { normalizePhoneLayout } from '../../shared/phone-layout.js';
+import { normalizeFeedFilters } from '../../shared/feed-filters.js';
 import { validateConnections, resolveWidgetConnection } from '../widgets/connections.js';
 import { validateGroups } from '../../shared/layout.js';
 import { safeUrl } from '../../shared/url.js';
@@ -27,6 +29,8 @@ export function validateConfig(value) {
         ids.add(item.id);
         if (item.icon && !/^[a-z0-9-]{1,60}$/.test(item.icon)) fail('图标名称无效');
       }
+      if (key === 'services' && item.internalUrl !== undefined && !url(item.internalUrl))
+        fail('内网访问地址无效');
       if (key === 'services' && item.healthUrl !== undefined && !url(item.healthUrl))
         fail('健康检查地址无效');
       if (
@@ -88,25 +92,28 @@ export function validateConfig(value) {
     layout: {
       density: layout.density,
       hidden: [...new Set(layout.hidden)],
+      phone: normalizePhoneLayout(layout.phone, { ...value, widgets }),
       groups: validateGroups(layout.groups, { ...value, widgets }),
     },
     titles,
     connections,
     widgets,
-    services: value.services.map(({ id, name, icon, url, healthUrl }) => ({
+    services: value.services.map(({ id, name, icon, url, healthUrl, internalUrl }) => ({
       id,
       name,
       icon,
       url,
       ...(healthUrl ? { healthUrl } : {}),
+      ...(internalUrl ? { internalUrl } : {}),
     })),
-    feeds: value.feeds.map(({ id, name, icon, url, site, limit }) => ({
+    feeds: value.feeds.map(({ id, name, icon, url, site, limit, filters }) => ({
       id,
       name,
       icon,
       url,
       site,
       limit,
+      filters: normalizeFeedFilters(filters),
     })),
     bookmarks: value.bookmarks.map(({ name, url }) => ({ name, url })),
     projects: value.projects.map(({ name, url }) => ({ name, url })),

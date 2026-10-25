@@ -17,3 +17,10 @@ artifacts
 !public/icons/*.png
 
 dist/
+
+.codex
+
+AGENTS.md
+AGENTS.override.md
+docs/CODEX_SUBAGENT_RULES.md
+agents
