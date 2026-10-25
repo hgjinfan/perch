@@ -6,7 +6,7 @@
 
 ## 本地启动
 
-需要 Node.js 22 或更新版本。当前版本 **v0.1.5**，采用 [MIT 许可证](LICENSE)。
+需要 Node.js 22 或更新版本。当前版本 **v0.1.7**，采用 [MIT 许可证](LICENSE)。
 
 ```sh
 git clone https://github.com/hgjinfan/perch.git
@@ -38,8 +38,20 @@ npm start
 ## VPS 部署
 
 ```sh
-docker compose up -d --build
+git clone https://github.com/hgjinfan/perch.git
+cd perch
+cp .env.example .env
+# Edit .env and set a strong ADMIN_PASSWORD. For reproducible deployments,
+# pin PERCH_VERSION to a release such as v0.1.7 instead of latest.
+docker compose pull
+docker compose up -d
 ```
+
+Docker Compose pulls the prebuilt image from `ghcr.io/hgjinfan/perch`; the VPS does not install Node.js or build the project. Each GitHub release publishes multi-architecture (`linux/amd64` and `linux/arm64`) images. To upgrade, update `PERCH_VERSION` in `.env`, then run `docker compose pull && docker compose up -d`. The `homepage-data` volume is preserved. To build from a local checkout instead, run `docker build -t perch:local .`.
+
+The GHCR package must be public for anonymous pulls. After the first image is published, open the repository's **Packages** tab, select `perch`, then choose **Package settings → Change visibility → Public**. Other users can then deploy it without a GitHub token.
+
+Pushing a `v*` tag automatically builds and publishes that tag for both architectures; stable versions also update `latest`. To publish an already existing tag, run **Actions → Publish container image → Run workflow** and enter the tag.
 
 默认仅将容器端口绑定到 VPS 的 `127.0.0.1:3210`，用现有 Nginx 或 Caddy 反向代理域名。例如 Caddy：
 

@@ -1,6 +1,6 @@
 services:
   homepage:
-    build: .
+    image: ghcr.io/hgjinfan/perch:${PERCH_VERSION:-latest}
     restart: unless-stopped
     ports:
       - '127.0.0.1:3210:3210'
