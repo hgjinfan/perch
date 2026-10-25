@@ -1,3 +1,4 @@
+import { validateConnections, resolveWidgetConnection } from '../widgets/connections.js';
 import { validateGroups } from '../../shared/layout.js';
 import { safeUrl } from '../../shared/url.js';
 import { validateWidget } from '../widgets.js';
@@ -55,7 +56,9 @@ export function validateConfig(value) {
   }
   if (!Array.isArray(value.widgets || []) || (value.widgets || []).length > 20)
     fail('自定义磁块最多 20 个');
+  const connections = validateConnections(value.connections);
   const widgets = (value.widgets || []).map(validateWidget);
+  for (const widget of widgets) resolveWidgetConnection(widget, connections);
   if (new Set(widgets.map((w) => w.id)).size !== widgets.length) fail('自定义磁块标识重复');
   const titles = {};
   for (const key of ['weather', 'status', 'bookmarks', 'projects']) {
@@ -88,6 +91,7 @@ export function validateConfig(value) {
       groups: validateGroups(layout.groups, { ...value, widgets }),
     },
     titles,
+    connections,
     widgets,
     services: value.services.map(({ id, name, icon, url, healthUrl }) => ({
       id,

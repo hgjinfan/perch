@@ -1,3 +1,4 @@
+import { validateConnections, resolveWidgetConnection } from '../widgets/connections.js';
 import { compareConfigs } from '../config/diff.js';
 import { inspectWidget } from '../widgets/source.js';
 import { createRequestLimiter } from '../request-budget.js';
@@ -87,9 +88,13 @@ export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboar
       requireSameOriginJson(request);
       limitPreview('admin');
       const value = await readJson(request);
-      let widget;
+      let widget, connections;
       try {
-        widget = validateWidget(value);
+        widget = validateWidget(value.widget ?? value);
+        connections = validateConnections(
+          value.widget ? (value.connections ?? store.get().connections) : store.get().connections,
+        );
+        resolveWidgetConnection(widget, connections);
       } catch (error) {
         throw new HttpError(400, error.message);
       }
@@ -107,8 +112,11 @@ export function createAdminRoutes({ store, assets, guard, fetcher, env, dashboar
               : controller.signal,
           });
         if (path.endsWith('widget-inspect'))
-          return json(response, await inspectWidget(widget, background, env));
-        return html(response, renderPreview(widget, await loadWidget(widget, background, env)));
+          return json(response, await inspectWidget(widget, background, env, connections));
+        return html(
+          response,
+          renderPreview(widget, await loadWidget(widget, background, env, connections)),
+        );
       } catch (error) {
         const known =
           /^(映射字段|找不到文本|总量必须|列表路径|API 返回 HTTP|缺少密钥|响应不是|响应超过)/.test(

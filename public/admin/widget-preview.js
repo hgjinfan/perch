@@ -1,7 +1,7 @@
 import { validateFields } from './validation.js';
 import { node } from '../core/dom.js';
 import { requestHtml } from '../core/api.js';
-export function mountWidgetPreview(controls, w, onRemove) {
+export function mountWidgetPreview(controls, w, onRemove, payload = () => w) {
   const actions = node('div');
   actions.className = 'widget-actions';
   const preview = node('button', '测试数据并预览');
@@ -27,12 +27,18 @@ export function mountWidgetPreview(controls, w, onRemove) {
   }
   controls.addEventListener('input', invalidate);
   controls.addEventListener('change', invalidate);
+
   preview.onclick = async () => {
     if (!validateFields(controls)) return;
+    const connectionsEditor =
+      w.source?.kind === 'connection'
+        ? controls.ownerDocument.querySelector(`[data-connection-id="${w.source.connectionId}"]`)
+        : null;
+    if (connectionsEditor && !validateFields(connectionsEditor)) return;
     controller?.abort();
     controller = new AbortController();
     const current = ++epoch,
-      snapshot = JSON.stringify(w);
+      snapshot = JSON.stringify(payload());
     attempted = true;
     preview.disabled = true;
     result.hidden = true;
@@ -44,7 +50,7 @@ export function mountWidgetPreview(controls, w, onRemove) {
         signal: controller.signal,
       });
       if (current !== epoch || !controls.isConnected) return;
-      if (JSON.stringify(w) !== snapshot) {
+      if (JSON.stringify(payload()) !== snapshot) {
         invalidate();
         return;
       }

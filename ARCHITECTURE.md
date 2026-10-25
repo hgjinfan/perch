@@ -203,3 +203,13 @@ public 入口使用 bundle=true/splitting=false，避免几 KB 的公共 chunk �
 theme-bootstrap.js 对实际主题源码进行 HTML closing-tag 转义，针对最终 script body 计算 CSP hash。source/built 两个资源工厂在 URL 改写前内联固定代码并暴露 scriptHashes，application 交给 securityHeaders 严格格式校验后拼入 CSP。配置和用户内容不参与此脚本生成，style-src 等策略保持原边界。
 
 配置 watcher 的 deferInitial 只对 freshly mounted 首页启用，首次常规轮询约 10 秒后开始；force 检查仍保留 2 秒节流。移除 app 首屏立即 check，避免无配置正文的检查挤入内容请求阶段。
+
+## 共享 API 连接
+
+`config.connections` 保存稳定 ID、名称、基础地址与请求头；旧配置规范化为 `[]`。`widgets/schema.js` 接受 `source.kind=connection` 的引用、路径、查询参数与 GET/POST 请求正文。`widgets/request-schema.js` 为独立 API 与连接统一验证请求头；`widgets/connections.js` 验证连接集合并将引用解析成等价的内部 API 来源。`shared/connection-request.js` 仅包含安全路径和查询参数规则，不含任何密钥或环境变量。
+
+`validateConfig` 在持久化前拒绝重复连接 ID、悬空引用和不安全请求。公开读取、管理员预览与字段检查共用来源解析和请求预算。预览兼容旧 widget 请求体，也接受 `{widget, connections}` 的未保存草稿封装；服务器重新验证，实际密钥仅在 readWidgetSource 发起请求时解析。配置备份保留引用，差异摘要整体遮蔽 connections。
+
+`dashboard.widgetInputs` 使用解析后的请求配置计算内部缓存指纹，因此地址或认证引用改变时只失效依赖该连接的磁块；连接名称不参与指纹。仍按磁块分别缓存映射结果，不引入共享原始响应缓存。
+
+`admin/connections.js` 管理连接表单与引用检查，由 admin.js 集中挂载；局部转换及预设只请求刷新现有编辑器，不重新绑定其生命周期。连接编辑使旧预览失效，完整草稿快照校验阻止在途响应覆盖新编辑。`widget-source.js` 提供来源选择和显式提取；预设可复用或创建连接。所有草稿继续由同一编辑会话检测，不保存到 localStorage。

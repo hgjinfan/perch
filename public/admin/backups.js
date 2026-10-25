@@ -11,6 +11,7 @@ const displayPath = (path) =>
         services: '服务',
         feeds: '订阅',
         widgets: '磁块',
+        connections: '共享连接',
         layout: '布局',
         groups: '分组',
         items: '磁贴',
@@ -91,7 +92,7 @@ export function mountBackups(root, { onRestored = () => {} } = {}) {
       if (current !== epoch) return;
       pending = backup;
       version = nextVersion;
-      summary.textContent = `首页「${info.title}」 · ${info.groups} 个分组 · ${info.services} 个服务 · ${info.feeds} 个订阅 · ${info.widgets} 个自定义磁块 · ${info.bookmarks} 个书签 · ${info.projects} 个项目`;
+      summary.textContent = `首页「${info.title}」 · ${info.groups} 个分组 · ${info.services} 个服务 · ${info.feeds} 个订阅 · ${info.widgets} 个自定义磁块 · ${info.connections ?? 0} 个共享连接 · ${info.bookmarks} 个书签 · ${info.projects} 个项目`;
       summary.hidden = false;
       const diff = root.querySelector('#backup-diff');
       diff.replaceChildren();

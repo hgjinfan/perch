@@ -1,3 +1,4 @@
+import { mountConnections } from './admin/connections.js';
 import { mountLazyPanel } from './admin/lazy-panel.js';
 import { notifyConfigChange } from './core/config-events.js';
 import { createEditSession } from './admin/edit-session.js';
@@ -200,7 +201,8 @@ function renderEditor(value) {
   }
   Object.keys(fields).forEach(editor);
   moduleOptions();
-  setupWidgets(config, moduleOptions);
+  const refreshWidgets = setupWidgets(config, moduleOptions);
+  mountConnections(document.querySelector('#connections-editor'), config, refreshWidgets);
 }
 for (const [name, validate] of [
   ['title', (v) => (v.trim() ? '' : '首页名称不能为空')],

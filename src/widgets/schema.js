@@ -1,3 +1,5 @@
+import { validateHeaders } from './request-schema.js';
+import { validConnectionPath, validConnectionQuery } from '../../shared/connection-request.js';
 import { safeUrl } from '../../shared/url.js';
 import { validPath, validScale, widgetDefinitions } from '../../shared/widget-types.js';
 const widgetTypes = Object.keys(widgetDefinitions);
@@ -22,12 +24,34 @@ export function validateWidget(w) {
   if (!Number.isInteger(refresh) || refresh < 30 || refresh > 86400)
     fail('刷新间隔须为 30–86400 秒');
   const source = w.source;
-  if (!plain(source) || !['static', 'api'].includes(source.kind)) fail('请选择手动内容或 API');
+  if (!plain(source) || !['static', 'api', 'connection'].includes(source.kind))
+    fail('请选择手动内容或 API');
   let normalizedSource;
   if (source.kind === 'static') {
     if (source.data === undefined || JSON.stringify(source.data).length > 16000)
       fail('手动内容不能为空，最多 16000 字符');
     normalizedSource = { kind: 'static', data: source.data };
+  } else if (source.kind === 'connection') {
+    if (
+      typeof source.connectionId !== 'string' ||
+      !/^[a-z0-9_-]{1,50}$/.test(source.connectionId) ||
+      !validConnectionPath(source.path) ||
+      !validConnectionQuery(source.query || {}) ||
+      !['GET', 'POST'].includes(source.method || 'GET')
+    )
+      fail('共享连接、路径或查询参数无效');
+    if (source.headers !== undefined || source.url !== undefined)
+      fail('共享连接磁块不能覆盖地址或请求头');
+    if (source.body !== undefined && JSON.stringify(source.body).length > 16000)
+      fail('请求正文过大');
+    normalizedSource = {
+      kind: 'connection',
+      connectionId: source.connectionId,
+      path: source.path,
+      query: source.query || {},
+      method: source.method || 'GET',
+      ...(source.body !== undefined ? { body: source.body } : {}),
+    };
   } else {
     if (
       !safeUrl(source.url) ||
@@ -35,20 +59,11 @@ export function validateWidget(w) {
       !['GET', 'POST'].includes(source.method || 'GET')
     )
       fail('API 地址或请求方式无效');
-    const headers = source.headers || {};
-    if (!plain(headers) || Object.keys(headers).length > 12) fail('请求头须为对象，最多 12 个');
-    for (const [key, value] of Object.entries(headers)) {
-      if (
-        !/^[A-Za-z0-9-]{1,60}$/.test(key) ||
-        ['host', 'cookie', 'connection', 'content-length', 'transfer-encoding'].includes(
-          key.toLowerCase(),
-        ) ||
-        !short(value, 2000) ||
-        /[\r\n]/.test(value)
-      )
-        fail('请求头无效');
-      for (const match of value.matchAll(/\$\{([^}]+)\}/g))
-        if (!/^WIDGET_[A-Z0-9_]+$/.test(match[1])) fail('密钥变量名必须以 WIDGET_ 开头');
+    let headers;
+    try {
+      headers = validateHeaders(source.headers);
+    } catch (error) {
+      fail(error.message);
     }
     if (source.body !== undefined && JSON.stringify(source.body).length > 16000)
       fail('请求正文过大');

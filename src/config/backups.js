@@ -29,6 +29,7 @@ export function summarizeConfig(config) {
     services: config.services.length,
     feeds: config.feeds.length,
     widgets: config.widgets.length,
+    connections: (config.connections || []).length,
     groups: config.layout.groups.length,
     bookmarks: config.bookmarks.length,
     projects: config.projects.length,

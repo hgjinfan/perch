@@ -2,7 +2,7 @@ import { requestJson } from '../core/api.js';
 import { node } from '../core/dom.js';
 import { validateFields } from './validation.js';
 
-export function mountFieldInspector(controls, widget, targets) {
+export function mountFieldInspector(controls, widget, targets, payload = () => widget) {
   const section = node('details');
   section.className = 'field-inspector';
   section.dataset.editorAuxiliary = 'true';
@@ -47,6 +47,7 @@ export function mountFieldInspector(controls, widget, targets) {
   }
   controls.addEventListener('input', invalidate);
   controls.addEventListener('change', invalidate);
+
   function draw() {
     paths.replaceChildren();
     const selected = targets[Number(target.value)];
@@ -81,10 +82,17 @@ export function mountFieldInspector(controls, widget, targets) {
   target.onchange = draw;
   read.onclick = async () => {
     if (!validateFields(controls)) return;
+    const connectionsEditor =
+      widget.source?.kind === 'connection'
+        ? controls.ownerDocument.querySelector(
+            `[data-connection-id="${widget.source.connectionId}"]`,
+          )
+        : null;
+    if (connectionsEditor && !validateFields(connectionsEditor)) return;
     controller?.abort();
     controller = new AbortController();
     const current = ++epoch,
-      snapshot = JSON.stringify(widget);
+      snapshot = JSON.stringify(payload());
     read.disabled = true;
     result.hidden = true;
     message.textContent = '正在读取字段结构…';
@@ -94,7 +102,8 @@ export function mountFieldInspector(controls, widget, targets) {
         body: JSON.parse(snapshot),
         signal: controller.signal,
       });
-      if (current !== epoch || !controls.isConnected || snapshot !== JSON.stringify(widget)) return;
+      if (current !== epoch || !controls.isConnected || snapshot !== JSON.stringify(payload()))
+        return;
       fields = info.fields;
       draw();
       result.hidden = false;

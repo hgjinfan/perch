@@ -349,3 +349,40 @@ Perch 的正确性不依赖任何 CDN purge 接口，也不需要清除缓存的
 需要真实数据时，运行 `node scripts/preset-lab.mjs --public`，在四个模拟磁块之外增加 PromLabs 公共 Prometheus（`sum(up)`）和 Jellyfin 官方 stable 演示版本磁块，均无需令牌。服务地址来源：[PromLabs](https://demo.promlabs.com/query)、[Jellyfin 官方演示说明](https://jellyfin.org/docs/general/testing/web/)。公共服务仅供低频手动联调，可能停机、限流或升级，不应当作生产数据源。
 
 可选真实网络验证：`PRESET_PUBLIC_TEST=1 node --test test/preset-public.test.js`，通过真实 Perch 管理预览及公开片段验证这两个接口。默认 `npm test` 跳过此测试，CI 不依赖外部服务可用性。Home Assistant 和 Proxmox 的真实认证、权限验证仍需要独立实例。
+
+## 共享连接
+
+管理页“共享连接”统一维护服务基础地址和认证请求头，自定义磁块选择“共享连接”后填写请求路径、查询参数及映射。连接与磁块使用同一个“保存并应用”；预览和字段映射助手读取当前未保存草稿。连接不单独请求上游，使用关联磁块的“测试数据并预览”检查实际接口。
+
+```json
+{
+  "connections": [
+    {
+      "id": "home-prometheus",
+      "name": "家庭 Prometheus",
+      "baseUrl": "https://metrics.example.com/prometheus",
+      "headers": { "Authorization": "Bearer ${WIDGET_PROMETHEUS_TOKEN}" }
+    }
+  ]
+}
+```
+
+磁块的 `source` 可配置为：
+
+```json
+{
+  "kind": "connection",
+  "connectionId": "home-prometheus",
+  "path": "/api/v1/query",
+  "query": { "query": "sum(up)" },
+  "method": "GET"
+}
+```
+
+这里的请求地址为 `https://metrics.example.com/prometheus/api/v1/query?query=sum%28up%29`（查询参数由程序编码，等价编码均可）。路径以 `/` 开头，追加到基础地址；不能携带其他域名、查询字符串、片段或目录回退。查询参数最多 30 项，值使用字符串。POST 查询可另设 `body`；认证请求头只能在连接上配置，不允许磁块覆盖。共享连接最多 40 个。
+
+已有独立 API 可在磁块内展开“提取为共享连接”，确认名称和基础路径后转换；磁块 ID、映射和布局保持不变。重复查询参数或无法保留原接口语义的基础路径不会自动转换。常用数据源预设可创建连接或复用已有连接；复制磁块保持同一连接引用。
+
+旧配置缺少 `connections` 时默认为空，原有 API 和手动数据继续使用。有磁块引用的连接不能删除；保存及备份恢复拒绝悬空引用。备份包含连接配置与变量引用，不包含服务器环境变量值；连接差异报告隐藏内容。真实密钥继续放在服务器环境变量中，修改环境变量后需重启服务。
+
+共享的是连接配置，并非原始响应缓存。每个磁块独立请求、映射和缓存；修改连接地址或请求头仅失效关联磁块缓存，重命名连接不清缓存。公开 HTML、片段、诊断和 PWA 缓存不包含连接地址或认证配置。

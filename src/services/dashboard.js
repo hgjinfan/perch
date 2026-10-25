@@ -1,4 +1,5 @@
 import { createCache, checkService, readRemote, parseFeed } from '../data.js';
+import { resolveWidgetConnection } from '../widgets/connections.js';
 import { loadWidget } from '../widgets.js';
 import { HttpError } from '../http.js';
 import { createWeatherService } from './weather.js';
@@ -99,7 +100,7 @@ export function createDashboardService(
           .map((f) => [`feed:${f.id}`, signature([f.url, f.limit])]),
         ...config.widgets
           .filter((w) => !config.layout.hidden.includes(`widget-${w.id}`))
-          .map((w) => [`widget:${w.id}`, signature(widgetInputs(w))]),
+          .map((w) => [`widget:${w.id}`, signature(widgetInputs(w, config.connections))]),
       ]);
       for (const [key, entry] of resourceCaches)
         if (active.get(key) !== entry.fingerprint) resourceCaches.delete(key);
@@ -107,8 +108,8 @@ export function createDashboardService(
     }
     return store.get();
   }
-  function widgetInputs(widget) {
-    const { id, title, ...inputs } = widget;
+  function widgetInputs(widget, connections) {
+    const { id, title, ...inputs } = resolveWidgetConnection(widget, connections);
     return inputs;
   }
   function sources() {
@@ -135,7 +136,8 @@ export function createDashboardService(
         name: w.title,
         kind: 'widget',
         enabled: !config.layout.hidden.includes(`widget-${w.id}`),
-        configured: w.source.kind === 'static' || Boolean(w.source.url),
+        configured:
+          w.source.kind === 'static' || w.source.kind === 'connection' || Boolean(w.source.url),
         sourceType: w.source.kind === 'static' ? 'manual' : 'api',
       })),
       {
@@ -189,8 +191,11 @@ export function createDashboardService(
       const widget = config.widgets.find((w) => w.id === id);
       if (!widget || config.layout.hidden.includes(`widget-${id}`))
         throw new HttpError(404, 'Not found');
-      return resource(`widget:${id}`, widgetInputs(widget), widget.refresh * 1000, () =>
-        loadWidget(widget, requestFetcher, env),
+      return resource(
+        `widget:${id}`,
+        widgetInputs(widget, config.connections),
+        widget.refresh * 1000,
+        () => loadWidget(widget, requestFetcher, env, config.connections),
       );
     },
     weather(request) {

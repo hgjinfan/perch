@@ -1,5 +1,7 @@
+import { resolveWidgetConnection } from './connections.js';
 import { mapWidget, validPath } from '../../shared/widget-types.js';
-export async function readWidgetSource(w, fetcher = fetch, env = process.env) {
+export async function readWidgetSource(w, fetcher = fetch, env = process.env, connections = []) {
+  w = resolveWidgetConnection(w, connections);
   let raw = w.source.data;
   if (w.source.kind === 'api') {
     const headers = {
@@ -39,11 +41,11 @@ export async function readWidgetSource(w, fetcher = fetch, env = process.env) {
   return raw;
 }
 
-export async function loadWidget(w, fetcher = fetch, env = process.env) {
-  return mapWidget(w, await readWidgetSource(w, fetcher, env));
+export async function loadWidget(w, fetcher = fetch, env = process.env, connections = []) {
+  return mapWidget(w, await readWidgetSource(w, fetcher, env, connections));
 }
-export async function inspectWidget(w, fetcher = fetch, env = process.env) {
-  const raw = await readWidgetSource(w, fetcher, env);
+export async function inspectWidget(w, fetcher = fetch, env = process.env, connections = []) {
+  const raw = await readWidgetSource(w, fetcher, env, connections);
   const fields = [];
   let truncated = false;
   function visit(value, path = '', depth = 0) {

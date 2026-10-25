@@ -1,3 +1,4 @@
+import { widgetPreviewPayload } from './admin/connections.js';
 import { mountFieldInspector } from './admin/field-inspector.js';
 import { duplicateWidget } from './admin/widget-copy.js';
 import { parseJsonField } from './admin/json-fields.js';
@@ -25,12 +26,17 @@ export function setupWidgets(config, onModulesChanged) {
   const drafts = new Map();
   const openStates = new Map();
   const add = document.querySelector('#add-widget');
-  mountPresetPicker(document.querySelector('#preset-picker'), (widget) => {
-    if (config.widgets.length >= 20) throw new Error('自定义磁块最多 20 个，请先删除不需要的磁块');
-    config.widgets.unshift(widget);
-    draw();
-    onModulesChanged();
-  });
+  mountPresetPicker(
+    document.querySelector('#preset-picker'),
+    (widget) => {
+      if (config.widgets.length >= 20)
+        throw new Error('自定义磁块最多 20 个，请先删除不需要的磁块');
+      config.widgets.unshift(widget);
+      draw();
+      onModulesChanged();
+    },
+    config,
+  );
   function draw() {
     for (const section of target.querySelectorAll('.widget-editor'))
       openStates.set(section.dataset.widgetId, section.open);
@@ -89,7 +95,7 @@ export function setupWidgets(config, onModulesChanged) {
         },
         { options: types },
       );
-      editWidgetSource(w, input, draw);
+      editWidgetSource(w, input, draw, config, controls);
       const heading = node('h3', '字段映射');
       controls.append(heading);
       const labels = {
@@ -149,7 +155,11 @@ export function setupWidgets(config, onModulesChanged) {
           }),
         );
       }
-      if (mappingTargets.length) mountFieldInspector(controls, w, mappingTargets);
+      if (mappingTargets.length)
+        mountFieldInspector(controls, w, mappingTargets, () => ({
+          widget: w,
+          connections: config.connections || [],
+        }));
       if (w.type === 'metric')
         input('数值倍率', w.scale ?? 1, (value) => (w.scale = Number(value)), {
           type: 'number',
@@ -200,12 +210,17 @@ export function setupWidgets(config, onModulesChanged) {
         onModulesChanged();
       };
       controls.append(copy);
-      mountWidgetPreview(controls, w, () => {
-        config.widgets = config.widgets.filter((item) => item.id !== w.id);
-        config.layout.hidden = config.layout.hidden.filter((id) => id !== `widget-${w.id}`);
-        draw();
-        onModulesChanged();
-      });
+      mountWidgetPreview(
+        controls,
+        w,
+        () => {
+          config.widgets = config.widgets.filter((item) => item.id !== w.id);
+          config.layout.hidden = config.layout.hidden.filter((id) => id !== `widget-${w.id}`);
+          draw();
+          onModulesChanged();
+        },
+        () => widgetPreviewPayload(w, config),
+      );
       target.append(section);
     }
     if (!config.widgets.length) {
@@ -234,4 +249,5 @@ export function setupWidgets(config, onModulesChanged) {
     onModulesChanged();
   };
   draw();
+  return draw;
 }
