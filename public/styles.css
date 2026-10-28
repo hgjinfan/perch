@@ -136,7 +136,7 @@ nav {
 }
 .service-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--gap);
   margin-bottom: var(--gap);
 }
@@ -1142,14 +1142,14 @@ progress.warning::-moz-progress-bar {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.service-grid > .app:nth-child(6n + 1) .service-detail {
-  left: 0;
-  transform: none;
-}
-.service-grid > .app:nth-child(6n) .service-detail {
-  left: auto;
-  right: 0;
-  transform: none;
+@media (min-width: 801px) {
+  /* Tooltip bounds follow the tile, independent of the automatic column count. */
+  .service-grid .service-detail {
+    left: 0;
+    transform: none;
+    max-width: min(220px, 100%);
+    overflow-wrap: anywhere;
+  }
 }
 @media (max-width: 800px) {
   .service-grid > .app:nth-child(3n + 1) .service-detail {
@@ -1163,7 +1163,6 @@ progress.warning::-moz-progress-bar {
     transform: none;
   }
 }
-
 .launch-shell {
   padding-top: env(safe-area-inset-top, 0px);
 }
