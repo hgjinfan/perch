@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { createAssets } from '../src/assets.js';
+import { buildServiceWorker } from '../src/pwa.js';
 import { isShellRequest } from '../public/pwa/policy.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -90,6 +91,42 @@ test('Worker shell includes module graph but excludes APIs and every admin entry
   );
   assert.equal(isShellRequest(new Request(origin + '/', { method: 'POST' }), origin, shell), false);
   assert.equal(isShellRequest(new Request('https://other.example/'), origin, shell), false);
+});
+
+test('Service worker deduplicates resolved asset aliases in shell and precache lists', async () => {
+  const files = new Map([
+    [
+      '/sw.js',
+      {
+        body: Buffer.from(
+          "const VERSION = '__SHELL_VERSION__'; const SHELL = ['__SHELL_FILES__']; const PRECACHE = ['__PRECACHE_FILES__']; const OFFLINE = '__OFFLINE_URL__'; const LAUNCH = '__LAUNCH_URL__'; const BASE_PATH = __BASE_PATH__;",
+        ),
+      },
+    ],
+    ['/client/public/setup.css', { admin: false }],
+    ['/setup.css', { admin: false, precache: true }],
+    ['/client/public/setup.js', { admin: false }],
+    ['/setup.js', { admin: false, precache: true }],
+    ['/client/public/app.js', { admin: false }],
+    ['/admin.js', { admin: true }],
+  ]);
+  const aliases = new Map([
+    ['/client/public/setup.css', '/client/public/setup-hash.css'],
+    ['/setup.css', '/client/public/setup-hash.css'],
+    ['/client/public/setup.js', '/client/public/setup-hash.js'],
+    ['/setup.js', '/client/public/setup-hash.js'],
+  ]);
+  const source = await buildServiceWorker(files, {
+    version: 'a'.repeat(20),
+    urlFor: (path) => aliases.get(path) || path,
+  });
+  const shell = JSON.parse(source.match(/const SHELL = (\[[^;]*\]);/)[1]);
+  const precache = JSON.parse(source.match(/const PRECACHE = (\[[^;]*\]);/)[1]);
+  assert.equal(shell.length, new Set(shell).size);
+  assert.equal(precache.length, new Set(precache).size);
+  assert.ok(precache.includes('/client/public/setup-hash.css'));
+  assert.ok(precache.includes('/client/public/setup-hash.js'));
+  assert.ok(!shell.some((path) => path.startsWith('/admin')));
 });
 
 test('Installed launch shell opens immediately offline without API interception; updates remain explicit', async () => {
