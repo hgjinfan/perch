@@ -140,6 +140,7 @@ test('production service worker precaches only eager public assets and offline s
   );
   const precache = shell;
   assert.ok(shell);
+  for (const urls of arrays) assert.equal(new Set(urls).size, urls.length);
   assert.ok(!shell.some((s) => /lucide|icons\.js/.test(s)));
   assert.ok(precache.includes('/offline.html'));
   assert.ok(!shell.some((s) => s.startsWith('/client/admin/')));
