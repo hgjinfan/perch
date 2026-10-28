@@ -241,3 +241,11 @@ theme-bootstrap.js 对实际主题源码进行 HTML closing-tag 转义，针对�
 服务 schema 保留可选 internalUrl，render/services 在公开访问锚点输出经校验/转义的两个入口，service-routes 只持久化 external/internal 枚举，并在配置同步后重新应用。URL 缺失单向回退；健康检查独立于客户端选择。检测地址不下发，内网访问地址属于公开导航数据；差异及诊断导出仍遮蔽地址。地址切换不触发新的上游探测。
 
 完整载入、保存成功和放弃修改通过 `admin/editor-drafts.js` 清理动态表单 DOM 后建立新编辑会话；普通局部重绘仍保留无效草稿，避免旧控件原文污染恢复后的已保存配置。
+
+## 首次排布与服务状态占位
+
+`src/layout-bootstrap.js` 将自包含的 `arrangeTileGrids` 作为固定脚本嵌入首页末尾，在等待 app 模块前完成初始细行网格排布。源码与生产资源工厂都为最终脚本文本生成精确 CSP 哈希；不插入配置或用户数据，不增加脚本请求，也不隐藏首页等待脚本。后续挂载（包括 PWA 和配置同步）同步调用同一计算函数，尺寸变化仍由 ResizeObserver 合并到下一帧处理；缺少 ResizeObserver 时保留普通 CSS Grid 回退。
+
+服务状态的更新时间保持初始 hidden，但外层 `service-freshness-slot` 从首屏预留一行高度，避免首个状态响应把整个内容区下推。无状态模块时不输出该占位；错误反馈仍可自然增高，不裁剪错误与重试操作。
+
+生产 bootstrap 由 `public/home/initial-layout.js` 单独打包后内联，运行时只读取构建产物，不能依赖镜像中不存在的 public 源码目录。天气首屏骨架复用 weather-main、hourly-forecast 及时间行的结构和排版，使正常预报替换时保持接近的高度；错误、缺少小时数据或长文字仍按真实内容自然展开。

@@ -21,6 +21,7 @@ for (const [scope, entries] of [
       offline: 'public/pwa/offline.js',
       launch: 'public/pwa/launch.js',
       theme: 'public/pwa/theme.js',
+      layout: 'public/home/initial-layout.js',
       styles: 'public/styles.css',
     },
   ],
@@ -75,9 +76,11 @@ for (const [scope, entries] of [
             ? '/admin.css'
             : name === 'styles'
               ? '/styles.css'
-              : ['offline', 'launch', 'theme'].includes(name)
-                ? `/pwa/${name}.js`
-                : `/${name}.js`;
+              : name === 'layout'
+                ? '/home/initial-layout.js'
+                : ['offline', 'launch', 'theme'].includes(name)
+                  ? `/pwa/${name}.js`
+                  : `/${name}.js`;
         aliases[canonical] = url;
       }
   }

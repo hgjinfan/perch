@@ -30,6 +30,8 @@ test('Service entrance includes status without a duplicate content card; each st
   const { document, config } = await fixture(t);
   assert.equal(document.querySelector('.content-board [data-module="status"]'), null);
   assert.ok(document.querySelector('.service-region[data-module="status"]'));
+  assert.ok(document.querySelector('.service-freshness-slot > time[hidden]'));
+
   assert.equal(
     document.querySelector('[data-service="vaultwarden"] .service-health').textContent,
     '检测中',

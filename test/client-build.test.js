@@ -2,7 +2,7 @@ import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { init, parse } from 'es-module-lexer/minimal';
 import assert from 'node:assert/strict';
-import { readFile, mkdtemp } from 'node:fs/promises';
+import { readFile, mkdtemp, cp, symlink, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,6 +42,13 @@ test('production emits small hashed public assets, isolated admin lazy chunks an
   const themeHash = createHash('sha256').update(themeInline).digest('base64');
   assert.ok(homeResponse.headers.get('content-security-policy').includes(`'sha256-${themeHash}'`));
   assert.ok(!homeResponse.headers.get('content-security-policy').includes('unsafe-inline'));
+  const inlineScripts = [...markup.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  assert.equal(inlineScripts.length, 2);
+  assert.ok(inlineScripts[1].index > markup.indexOf('</main>'));
+  for (const [, code] of inlineScripts) {
+    const hash = createHash('sha256').update(code).digest('base64');
+    assert.ok(homeResponse.headers.get('content-security-policy').includes(`'sha256-${hash}'`));
+  }
 
   const launchResponse = await fetch(base + '/launch.html');
   const launch = await launchResponse.text();
@@ -161,4 +168,26 @@ test('production client URLs and PWA scope honor a configured base path', async 
   const worker = await fetch(`${base}/sub/perch/sw.js`);
   assert.equal(worker.headers.get('service-worker-allowed'), '/sub/perch/');
   assert.ok((await worker.text()).includes('"/sub/perch"'));
+});
+
+test('production bootstrap starts without the public source tree, matching the runtime image', async (t) => {
+  const runtime = await mkdtemp(join(tmpdir(), 'perch-runtime-layout-'));
+  t.after(() => rm(runtime, { recursive: true, force: true }));
+  await cp(resolve(root, 'src'), resolve(runtime, 'src'), { recursive: true });
+  await cp(resolve(root, 'shared'), resolve(runtime, 'shared'), { recursive: true });
+  await cp(resolve(root, 'package.json'), resolve(runtime, 'package.json'));
+  await symlink(resolve(root, 'node_modules'), resolve(runtime, 'node_modules'), 'dir');
+  execFileSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `
+    import { createAssets } from './src/assets.js';
+    const assets = await createAssets(process.cwd(), { mode: 'built', directory: ${JSON.stringify(directory)} });
+    if (!assets.homeShell.includes('gridAutoRows')) throw Error('Missing layout bootstrap');
+  `,
+    ],
+    { cwd: runtime, stdio: 'pipe' },
+  );
 });

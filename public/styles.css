@@ -344,7 +344,13 @@ nav {
   display: block;
   font-variant-numeric: tabular-nums;
 }
+.service-freshness-slot {
+  min-height: 1.4em;
+  font-size: 11px;
+  line-height: 1.4;
+}
 .service-freshness {
+  display: block;
   justify-self: end;
   color: var(--sub);
   font-size: 11px;
@@ -865,6 +871,21 @@ progress.warning::-moz-progress-bar {
   width: 42px;
   height: 42px;
   border-radius: 12px;
+}
+.skeleton-weather-temperature {
+  height: 1.15em;
+  display: flex;
+  align-items: center;
+}
+.skeleton-line {
+  background: linear-gradient(
+      color-mix(in srgb, var(--sub) 14%, var(--tile)),
+      color-mix(in srgb, var(--sub) 14%, var(--tile))
+    )
+    left center / min(64%, 120px) 0.7em no-repeat;
+}
+.hourly-heading .skeleton-line {
+  width: 70px;
 }
 .skeleton-weather-main {
   display: flex;

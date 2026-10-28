@@ -42,7 +42,7 @@ export function renderServiceGrid(config) {
   const switcher = config.services.some((s) => safeUrl(s.internalUrl))
     ? '<label class="service-route-label">访问入口<select data-service-route aria-label="服务访问入口"><option value="external">公网优先</option><option value="internal">内网优先</option></select></label>'
     : '';
-  return `${switcher}<div class="service-region" role="group" aria-label="服务入口与状态"${enabled ? ' data-module="status" data-fragment="/fragments/status" data-refresh="60000"' : ''}><div class="service-grid module-content" data-load-state="ready" aria-busy="false">${tiles}</div>${enabled ? '<span class="module-update visually-hidden" role="status" hidden>正在更新服务状态</span><time id="service-freshness" class="service-freshness" data-freshness hidden></time><div data-load-feedback></div>' : ''}</div>`;
+  return `${switcher}<div class="service-region" role="group" aria-label="服务入口与状态"${enabled ? ' data-module="status" data-fragment="/fragments/status" data-refresh="60000"' : ''}><div class="service-grid module-content" data-load-state="ready" aria-busy="false">${tiles}</div>${enabled ? '<span class="module-update visually-hidden" role="status" hidden>正在更新服务状态</span><div class="service-freshness-slot"><time id="service-freshness" class="service-freshness" data-freshness hidden></time></div><div data-load-feedback></div>' : ''}</div>`;
 }
 
 export function renderServiceResult(config, result) {

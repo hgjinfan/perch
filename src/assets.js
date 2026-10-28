@@ -1,4 +1,5 @@
 import { createThemeBootstrap } from './theme-bootstrap.js';
+import { createLayoutBootstrap } from './layout-bootstrap.js';
 import { createBuiltAssets } from './built-assets.js';
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve, extname, relative, sep } from 'node:path';
@@ -41,6 +42,11 @@ export async function createAssets(root, { mode = 'source', directory, basePath 
   await collect(resolve(root, 'public'), '');
   await collect(resolve(root, 'shared'), '/shared');
   const theme = createThemeBootstrap(files.get('/pwa/theme.js').body.toString());
+  // Source mode has public/ available; production reads the emitted bootstrap instead.
+  const { arrangeTileGrids } = await import('../public/home/tile-layout.js');
+  const layout = createLayoutBootstrap(
+    `if(globalThis.ResizeObserver)(${arrangeTileGrids.toString()})(document.querySelectorAll('#board .content-board'));`,
+  );
   const hash = createHash('sha256');
   for (const [path, file] of [...files].sort(([a], [b]) => a.localeCompare(b)))
     hash.update(path).update(file.body);
@@ -51,7 +57,12 @@ export async function createAssets(root, { mode = 'source', directory, basePath 
     let source = file.body.toString('utf8');
     if (type === '.js') source = await versionModule(source, path, urlFor, (p) => files.has(p));
     else if (type === '.html')
-      source = versionHtml(theme.render(source), urlFor, (p) => files.has(p), basePath);
+      source = versionHtml(
+        layout.render(theme.render(source)),
+        urlFor,
+        (p) => files.has(p),
+        basePath,
+      );
     else if (type === '.webmanifest') {
       const manifest = JSON.parse(source);
       manifest.id = mountedPath(basePath, '/');
@@ -74,7 +85,7 @@ export async function createAssets(root, { mode = 'source', directory, basePath 
   }
   return {
     version,
-    scriptHashes: [theme.hash],
+    scriptHashes: [theme.hash, layout.hash],
     urlFor,
     homeShell: files.get('/index.html').body.toString(),
     isAdmin: (path) => path.startsWith('/api/admin/') || assetFor(path)?.admin,

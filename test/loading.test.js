@@ -62,7 +62,13 @@ test('First HTML contains typed placeholders, static links and empty states befo
   assert.ok(document.querySelector('.chips a'));
   for (const type of Object.keys(widgetDefinitions))
     assert.ok(modules.get(`widget-${type}`).content.querySelector(`.skeleton-${type}`));
-  assert.equal(modules.get('weather').content.querySelectorAll('.skeleton-hours > div').length, 12);
+  assert.equal(
+    modules.get('weather').content.querySelectorAll('.skeleton-weather-hours > .hourly-point')
+      .length,
+    12,
+  );
+  assert.ok(modules.get('weather').content.querySelector('.hourly-detail'));
+  assert.equal(modules.get('weather').content.querySelectorAll('.state-label').length, 2);
 });
 
 test('HTML fragments settle independently and preserve existing DOM on refresh failures', async (t) => {
