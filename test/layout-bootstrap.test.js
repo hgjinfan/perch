@@ -35,8 +35,40 @@ test('embedded first layout needs no module download and keeps no-observer fallb
   runInNewContext(code, {
     document,
     ResizeObserver: class {},
-    getComputedStyle: () => ({ rowGap: '14px' }),
+    getComputedStyle: () => ({ gridTemplateColumns: '300px 300px', columnGap: '14px' }),
   });
-  assert.equal(grid.style.gridAutoRows, '4px');
-  assert.equal(tile.style.gridRowEnd, 'span 7');
+  assert.equal(grid.style.gridAutoRows, '1px');
+  assert.equal(tile.style.gridRowEnd, 'span 114');
+});
+
+test('multi-column spacing stays below one pixel error and single-column restores natural rows', (t) => {
+  let columns = '300px 300px',
+    gap = '14px';
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'getComputedStyle');
+  Object.defineProperty(globalThis, 'getComputedStyle', {
+    configurable: true,
+    value: () => ({ gridTemplateColumns: columns, columnGap: gap }),
+  });
+  t.after(() => {
+    if (previous) Object.defineProperty(globalThis, 'getComputedStyle', previous);
+    else delete globalThis.getComputedStyle;
+  });
+  const heights = [100, 149, 438.34, 671.63];
+  const tiles = heights.map((height) => ({ style: {}, getBoundingClientRect: () => ({ height }) }));
+  const grid = { style: {}, children: tiles };
+  for (gap of ['14px', '10px']) {
+    arrangeTileGrids([grid]);
+    for (const [index, tile] of tiles.entries()) {
+      const actual = Number(tile.style.gridRowEnd.split(' ')[1]) - heights[index];
+      assert.ok(actual >= parseFloat(gap) && actual < parseFloat(gap) + 1);
+    }
+    assert.equal(grid.style.rowGap, '0px');
+    assert.equal(grid.style.marginBottom, `${-parseFloat(gap)}px`);
+  }
+  columns = '600px';
+  arrangeTileGrids([grid]);
+  assert.equal(grid.style.gridAutoRows, '');
+  assert.equal(grid.style.rowGap, '');
+  assert.equal(grid.style.marginBottom, '');
+  assert.ok(tiles.every((tile) => tile.style.gridRowEnd === ''));
 });

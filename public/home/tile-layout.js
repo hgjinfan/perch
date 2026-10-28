@@ -2,10 +2,23 @@
 // Keep this function self-contained: the server also embeds it before the first paint.
 export function arrangeTileGrids(grids) {
   for (const grid of grids) {
-    grid.style.gridAutoRows = '4px';
-    const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
+    const style = getComputedStyle(grid);
+    const singleColumn = style.gridTemplateColumns.trim().split(/\s+/).length <= 1;
+    if (singleColumn || !grid.children.length) {
+      grid.style.gridAutoRows = '';
+      grid.style.rowGap = '';
+      grid.style.marginBottom = '';
+      for (const tile of grid.children) tile.style.gridRowEnd = '';
+      continue;
+    }
+    // Count pixels, not (row + gap) tracks: keep quantization below one pixel.
+    const gap = parseFloat(style.columnGap) || 0;
+    grid.style.gridAutoRows = '1px';
+    grid.style.rowGap = '0px';
+    // Each span includes its trailing gap; the last row must not add it twice.
+    grid.style.marginBottom = `${-gap}px`;
     for (const tile of grid.children) {
-      const rows = Math.max(1, Math.ceil((tile.getBoundingClientRect().height + gap) / (4 + gap)));
+      const rows = Math.max(1, Math.ceil(tile.getBoundingClientRect().height + gap));
       tile.style.gridRowEnd = `span ${rows}`;
     }
   }
